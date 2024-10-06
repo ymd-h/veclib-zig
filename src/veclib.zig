@@ -108,7 +108,6 @@ test "Validate Out" {
     validateOut(u32, @TypeOf(a[0..]));
 }
 
-
 /// Vector Function without arguments
 pub fn VectorFunction0(comptime O: type, comptime vec_size: usize) type {
     return struct {
@@ -175,7 +174,6 @@ test "Vector Function 0" {
     VectorFunction0(f16, 0).call(Fill.call, out.items);
     try testing.expectEqualSlices(f16, true_out.items, out.items);
 }
-
 
 /// Vector Function with 1 argument
 pub fn VectorFunction1(comptime T1: type, comptime O: type, comptime vec_size: usize) type {
@@ -281,7 +279,6 @@ test "Vector Function 1" {
     // Without SIMD
     try TestV1.do_test(VectorFunction1(u32, u32, 0));
 }
-
 
 /// Vector Function with 2 arguments
 pub fn VectorFunction2(comptime T1: type, comptime T2: type, comptime O: type, comptime vec_size: usize) type {
@@ -514,7 +511,7 @@ const BinaryOptions = struct {
     type: type,
 
     /// Binary Operation Selector
-    op: BinaryFunction,
+    f: BinaryFunction,
 
     /// SIMD Vector Size
     ///
@@ -523,14 +520,13 @@ const BinaryOptions = struct {
     simd_size: ?usize = null,
 };
 
-
 /// Call binary function
 ///
 /// * `arg1`, `arg2` can be scalar (`T`) or vector (`[]T`)
 /// * `out` must be vector (`[]T`)
 pub fn binary(comptime options: BinaryOptions, arg1: anytype, arg2: anytype, out: anytype) void {
     const T = options.type;
-    const O: type = switch (options.op) {
+    const O: type = switch (options.f) {
         .eq, .neq, .gt, .gte, .lt, .lte => bool,
         else => T,
     };
@@ -540,7 +536,7 @@ pub fn binary(comptime options: BinaryOptions, arg1: anytype, arg2: anytype, out
     const Binary = struct {
         inline fn call(a1: anytype, a2: anytype) V2.ReturnType(@TypeOf(a1, a2)) {
             const OType = V2.ReturnType(@TypeOf(a1));
-            return biFn(OType, options.op, a1, a2);
+            return biFn(OType, options.f, a1, a2);
         }
     };
 
@@ -560,7 +556,7 @@ test "binary" {
             defer b.deinit();
             try b.appendNTimes(rhs, N);
 
-            const O = switch (opt.op) {
+            const O = switch (opt.f) {
                 .eq, .neq, .gt, .gte, .lt, .lte => bool,
                 else => opt.type,
             };
@@ -593,8 +589,8 @@ test "binary" {
         }
     };
 
-    try Test.do(.{ .type = f32, .op = .add }, 4.0, 2.0, 6.0);
-    try Test.do(.{ .type = f32, .op = .add, .simd_size = 0 }, 4.0, 2.0, 6.0);
-    try Test.do(.{ .type = u16, .op = .eq }, 2, 4, false);
-    try Test.do(.{ .type = u16, .op = .eq, .simd_size = 0 }, 2, 4, false);
+    try Test.do(.{ .type = f32, .f = .add }, 4.0, 2.0, 6.0);
+    try Test.do(.{ .type = f32, .f = .add, .simd_size = 0 }, 4.0, 2.0, 6.0);
+    try Test.do(.{ .type = u16, .f = .eq }, 2, 4, false);
+    try Test.do(.{ .type = u16, .f = .eq, .simd_size = 0 }, 2, 4, false);
 }
