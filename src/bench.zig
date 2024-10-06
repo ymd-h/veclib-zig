@@ -1,4 +1,5 @@
 const std = @import("std");
+const veclib = @import("./veclib.zig");
 
 fn bench(writer: anytype, comptime name: []const u8, f: anytype, args: anytype) !void {
     const start = std.time.nanoTimestamp();
@@ -60,6 +61,10 @@ fn Add(comptime T: type) type {
                 c.items[i..][0..n].* = av + bv;
             }
         }
+
+        fn veclib_loop(a: std.ArrayList(T), b: std.ArrayList(T), c: *std.ArrayList(T)) void {
+            veclib.binary(.{ .type = T, .f = .add }, a.items, b.items, c.items);
+        }
     };
 }
 
@@ -72,9 +77,10 @@ pub fn main() !void {
     const stdout = bw.writer();
     _ = try stdout.write("\n");
 
-    const N1 = 1_000_000;
+    const N1 = 3_000_000;
     try run_bench2(u32, allocator, stdout, "for (u32)", Add(u32).for_loop, 8 * N1);
     try run_bench2(u32, allocator, stdout, "vec (u32)", Add(u32).vec_loop, 8 * N1);
+    try run_bench2(u32, allocator, stdout, "veclib (u32)", Add(u32).veclib_loop, 8 * N1);
 
     try bw.flush();
 }
