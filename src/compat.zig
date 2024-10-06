@@ -1,3 +1,5 @@
+//! compat module
+
 const std = @import("std");
 const version = @import("builtin").zig_version;
 

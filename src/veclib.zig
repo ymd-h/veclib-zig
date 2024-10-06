@@ -1,3 +1,7 @@
+//! veclib: SIMD based vector library
+//!
+//! veclib provides SIMD based functions over slice `[]T`.
+
 const std = @import("std");
 const testing = std.testing;
 
@@ -104,6 +108,8 @@ test "Validate Out" {
     validateOut(u32, @TypeOf(a[0..]));
 }
 
+
+/// Vector Function without arguments
 pub fn VectorFunction0(comptime O: type, comptime vec_size: usize) type {
     return struct {
         const Self = @This();
@@ -115,6 +121,7 @@ pub fn VectorFunction0(comptime O: type, comptime vec_size: usize) type {
             }
         }
 
+        /// Call Vector Function
         pub fn call(comptime f: anytype, out: anytype) void {
             validateOut(O, @TypeOf(out));
 
@@ -169,6 +176,8 @@ test "Vector Function 0" {
     try testing.expectEqualSlices(f16, true_out.items, out.items);
 }
 
+
+/// Vector Function with 1 argument
 pub fn VectorFunction1(comptime T1: type, comptime O: type, comptime vec_size: usize) type {
     return struct {
         const Self = @This();
@@ -187,6 +196,7 @@ pub fn VectorFunction1(comptime T1: type, comptime O: type, comptime vec_size: u
             }
         }
 
+        /// Call Vector Function
         pub fn call(comptime f: anytype, arg1: anytype, out: anytype) void {
             validateOut(O, @TypeOf(out));
 
@@ -272,6 +282,8 @@ test "Vector Function 1" {
     try TestV1.do_test(VectorFunction1(u32, u32, 0));
 }
 
+
+/// Vector Function with 2 arguments
 pub fn VectorFunction2(comptime T1: type, comptime T2: type, comptime O: type, comptime vec_size: usize) type {
     return struct {
         const Self = @This();
@@ -291,6 +303,7 @@ pub fn VectorFunction2(comptime T1: type, comptime T2: type, comptime O: type, c
             }
         }
 
+        /// Call Vector Function
         pub fn call(comptime f: anytype, arg1: anytype, arg2: anytype, out: anytype) void {
             validateOut(O, @TypeOf(out));
 
@@ -400,10 +413,13 @@ test "Vector Function 2" {
     try TestV2.do_test(VectorFunction2(f32, f32, f32, 0));
 }
 
+/// Fill Options
 const FillOptions = struct {
+    /// SIMD Vector Size
     simd_size: ?usize = null,
 };
 
+/// Fill values to Vector
 pub fn fill(comptime options: FillOptions, value: anytype, out: anytype) void {
     const T = ElementType(@TypeOf(out));
     const size = options.simd_size orelse (std.simd.suggestVectorLength(T) orelse 0);
@@ -443,7 +459,8 @@ test "fill" {
     try Test.do(.{ .simd_size = 0 });
 }
 
-pub const BinaryOp = enum {
+/// Binary Function Definitions
+pub const BinaryFunction = enum {
     add,
     wrap_add,
     sat_add,
@@ -466,7 +483,7 @@ pub const BinaryOp = enum {
     lte,
 };
 
-inline fn bop(comptime T: type, comptime op: BinaryOp, a: anytype, b: anytype) T {
+inline fn biFn(comptime T: type, comptime op: BinaryFunction, a: anytype, b: anytype) T {
     return switch (op) {
         .add => a + b,
         .wrap_add => a +% b,
@@ -491,12 +508,26 @@ inline fn bop(comptime T: type, comptime op: BinaryOp, a: anytype, b: anytype) T
     };
 }
 
+/// Options for `binary` function
 const BinaryOptions = struct {
+    /// Input Type
     type: type,
-    op: BinaryOp,
+
+    /// Binary Operation Selector
+    op: BinaryFunction,
+
+    /// SIMD Vector Size
+    ///
+    /// If `null` (default), suggested size is used.
+    /// By setting this to `0`, SIMD is disabled.
     simd_size: ?usize = null,
 };
 
+
+/// Call binary function
+///
+/// * `arg1`, `arg2` can be scalar (`T`) or vector (`[]T`)
+/// * `out` must be vector (`[]T`)
 pub fn binary(comptime options: BinaryOptions, arg1: anytype, arg2: anytype, out: anytype) void {
     const T = options.type;
     const O: type = switch (options.op) {
@@ -509,7 +540,7 @@ pub fn binary(comptime options: BinaryOptions, arg1: anytype, arg2: anytype, out
     const Binary = struct {
         inline fn call(a1: anytype, a2: anytype) V2.ReturnType(@TypeOf(a1, a2)) {
             const OType = V2.ReturnType(@TypeOf(a1));
-            return bop(OType, options.op, a1, a2);
+            return biFn(OType, options.op, a1, a2);
         }
     };
 
