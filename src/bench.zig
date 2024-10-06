@@ -78,9 +78,9 @@ pub fn main() !void {
     _ = try stdout.write("\n");
 
     const N1 = 3_000_000;
-    try run_bench2(u32, allocator, stdout, "for (u32)", Add(u32).for_loop, 8 * N1);
-    try run_bench2(u32, allocator, stdout, "vec (u32)", Add(u32).vec_loop, 8 * N1);
-    try run_bench2(u32, allocator, stdout, "veclib (u32)", Add(u32).veclib_loop, 8 * N1);
+    try run_bench2(u32, allocator, stdout, "u32: naive for-loop    ", Add(u32).for_loop, 8 * N1);
+    try run_bench2(u32, allocator, stdout, "u32: handwriting vector", Add(u32).vec_loop, 8 * N1);
+    try run_bench2(u32, allocator, stdout, "u32: veclib            ", Add(u32).veclib_loop, 8 * N1);
 
     try bw.flush();
 }
