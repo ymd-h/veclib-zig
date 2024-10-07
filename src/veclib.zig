@@ -456,6 +456,113 @@ test "fill" {
     try Test.do(.{ .simd_size = 0 });
 }
 
+pub const UnaryFunction = enum {
+    sqrt,
+    sin,
+    cos,
+    tan,
+    exp,
+    exp2,
+    exp1m,
+    log,
+    log2,
+    log10,
+    log1p,
+    abs,
+    floor,
+    ceil,
+    trunc,
+    round,
+};
+
+inline fn uniFn(comptime T: type, comptime f: UnaryFunction, a: anytype) T {
+    return switch (f) {
+        .sqrt => @sqrt(a),
+        .sin => @sin(a),
+        .cos => @cos(a),
+        .tan => @tan(a),
+        .exp => @exp(a),
+        .exp2 => @exp2(a),
+        .exp1m => @exp(a - (if (isSIMDVector(@TypeOf(a))) @as(@TypeOf(a), @splat(1)) else 1)),
+        .log => @log(a),
+        .log2 => @log2(a),
+        .log10 => @log10(a),
+        .log1p => @log(a + (if (isSIMDVector(@TypeOf(a))) @as(@TypeOf(a), @splat(1)) else 1)),
+        .abs => @abs(a),
+        .floor => @floor(a),
+        .ceil => @ceil(a),
+        .trunc => @trunc(a),
+        .round => @round(a),
+    };
+}
+
+const UnaryOptions = struct {
+    type: type,
+    f: UnaryFunction,
+    simd_size: ?usize = null,
+};
+
+pub fn unary(comptime options: UnaryOptions, arg: anytype, out: anytype) void {
+    const T = options.type;
+    const O = options.type;
+    const size = options.simd_size orelse (std.simd.suggestVectorLength(T) orelse 0);
+
+    const V1 = VectorFunction1(T, O, size);
+
+    const Unary = struct {
+        inline fn call(a: anytype) V1.ReturnType(@TypeOf(a)) {
+            const OType = V1.ReturnType(@TypeOf(a));
+            return uniFn(OType, options.f, a);
+        }
+    };
+
+    V1.call(Unary.call, arg, out);
+}
+
+test "unary function" {
+    const N = 10;
+
+    const Test = struct {
+        fn do(comptime opt: UnaryOptions, a: anytype, o: anytype) !void {
+            var arg = std.ArrayList(opt.type).init(testing.allocator);
+            defer arg.deinit();
+            try arg.appendNTimes(a, N);
+
+            var out = std.ArrayList(opt.type).init(testing.allocator);
+            defer out.deinit();
+            try out.resize(N);
+
+            var true_out = std.ArrayList(opt.type).init(testing.allocator);
+            defer true_out.deinit();
+            try true_out.appendNTimes(o, N);
+
+            unary(opt, arg.items, out.items);
+            for (true_out.items, out.items) |ti, oi| {
+                try testing.expectApproxEqRel(oi, ti, 1e-6);
+            }
+        }
+    };
+
+    try Test.do(.{ .type = f32, .f = .sqrt }, 4.0, 2.0);
+    try Test.do(.{ .type = f32, .f = .sqrt, .simd_size = 0 }, 4.0, 2.0);
+    try Test.do(.{ .type = f32, .f = .sin }, 1.7, @sin(1.7));
+    try Test.do(.{ .type = f32, .f = .sin }, 1.7, @sin(1.7));
+    try Test.do(.{ .type = f32, .f = .cos }, 1.7, @cos(1.7));
+    try Test.do(.{ .type = f32, .f = .tan }, 1.7, @tan(1.7));
+    try Test.do(.{ .type = f32, .f = .exp }, 0.89, @exp(0.89));
+    try Test.do(.{ .type = f32, .f = .exp2 }, 0.89, @exp2(0.89));
+    try Test.do(.{ .type = f32, .f = .exp1m }, 1.89, @exp(0.89));
+    try Test.do(.{ .type = f32, .f = .log }, 2.7, @log(2.7));
+    try Test.do(.{ .type = f32, .f = .log2 }, 2.7, @log2(2.7));
+    try Test.do(.{ .type = f32, .f = .log10 }, 2.7, @log10(2.7));
+    try Test.do(.{ .type = f32, .f = .log1p }, 0.01, @log(1.01));
+    try Test.do(.{ .type = f32, .f = .abs }, -3.3, 3.3);
+    try Test.do(.{ .type = f32, .f = .floor }, 2.7, 2.0);
+    try Test.do(.{ .type = f32, .f = .ceil }, 2.7, 3.0);
+    try Test.do(.{ .type = f32, .f = .trunc }, -2.7, -2.0);
+    try Test.do(.{ .type = f32, .f = .round }, 2.7, 3.0);
+}
+
 /// Binary Function Definitions
 pub const BinaryFunction = enum {
     add,
@@ -480,8 +587,8 @@ pub const BinaryFunction = enum {
     lte,
 };
 
-inline fn biFn(comptime T: type, comptime op: BinaryFunction, a: anytype, b: anytype) T {
-    return switch (op) {
+inline fn biFn(comptime T: type, comptime f: BinaryFunction, a: anytype, b: anytype) T {
+    return switch (f) {
         .add => a + b,
         .wrap_add => a +% b,
         .sat_add => a +| b,
