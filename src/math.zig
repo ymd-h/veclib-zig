@@ -170,6 +170,113 @@ test "unary function" {
     try Test.do(.{ .type = f32, .f = .round }, 2.7, 3.0);
 }
 
+pub fn sqrt(comptime T: type, arg: anytype, out: anytype) void {
+    unary(.{ .type = T, .f = .sqrt }, arg, out);
+}
+
+pub fn sin(comptime T: type, arg: anytype, out: anytype) void {
+    unary(.{ .type = T, .f = .sin }, arg, out);
+}
+
+pub fn cos(comptime T: type, arg: anytype, out: anytype) void {
+    unary(.{ .type = T, .f = .cos }, arg, out);
+}
+
+pub fn tan(comptime T: type, arg: anytype, out: anytype) void {
+    unary(.{ .type = T, .f = .tan }, arg, out);
+}
+
+pub fn exp(comptime T: type, arg: anytype, out: anytype) void {
+    unary(.{ .type = T, .f = .exp }, arg, out);
+}
+
+pub fn exp2(comptime T: type, arg: anytype, out: anytype) void {
+    unary(.{ .type = T, .f = .exp2 }, arg, out);
+}
+
+pub fn exp1m(comptime T: type, arg: anytype, out: anytype) void {
+    unary(.{ .type = T, .f = .exp1m }, arg, out);
+}
+
+pub fn log(comptime T: type, arg: anytype, out: anytype) void {
+    unary(.{ .type = T, .f = .log }, arg, out);
+}
+
+pub fn log2(comptime T: type, arg: anytype, out: anytype) void {
+    unary(.{ .type = T, .f = .log2 }, arg, out);
+}
+
+pub fn log10(comptime T: type, arg: anytype, out: anytype) void {
+    unary(.{ .type = T, .f = .log10 }, arg, out);
+}
+
+pub fn log1p(comptime T: type, arg: anytype, out: anytype) void {
+    unary(.{ .type = T, .f = .log1p }, arg, out);
+}
+
+pub fn abs(comptime T: type, arg: anytype, out: anytype) void {
+    unary(.{ .type = T, .f = .abs }, arg, out);
+}
+
+pub fn floor(comptime T: type, arg: anytype, out: anytype) void {
+    unary(.{ .type = T, .f = .floor }, arg, out);
+}
+
+pub fn ceil(comptime T: type, arg: anytype, out: anytype) void {
+    unary(.{ .type = T, .f = .ceil }, arg, out);
+}
+
+pub fn trunc(comptime T: type, arg: anytype, out: anytype) void {
+    unary(.{ .type = T, .f = .trunc }, arg, out);
+}
+
+pub fn round(comptime T: type, arg: anytype, out: anytype) void {
+    unary(.{ .type = T, .f = .round }, arg, out);
+}
+
+test "explicit unary" {
+    const N = 100;
+
+    const Test = struct {
+        fn do(comptime T: type, f: anytype, a: anytype, o: anytype) !void {
+            var arg = std.ArrayList(T).init(testing.allocator);
+            defer arg.deinit();
+            try arg.appendNTimes(a, N);
+
+            var out = std.ArrayList(T).init(testing.allocator);
+            defer out.deinit();
+            try out.resize(N);
+
+            var true_out = std.ArrayList(T).init(testing.allocator);
+            defer true_out.deinit();
+            try true_out.appendNTimes(o, N);
+
+            f(T, arg.items, out.items);
+
+            for (true_out.items, out.items) |ti, oi| {
+                try testing.expectApproxEqRel(ti, oi, 1e-6);
+            }
+        }
+    };
+
+    try Test.do(f32, sqrt, 4.0, 2.0);
+    try Test.do(f32, sin, 1.7, @sin(1.7));
+    try Test.do(f32, cos, 1.7, @cos(1.7));
+    try Test.do(f32, tan, 1.7, @tan(1.7));
+    try Test.do(f32, exp, 0.89, @exp(0.89));
+    try Test.do(f32, exp2, 0.89, @exp2(0.89));
+    try Test.do(f32, exp1m, 1.89, @exp(0.89));
+    try Test.do(f32, log, 2.7, @log(2.7));
+    try Test.do(f32, log2, 2.7, @log2(2.7));
+    try Test.do(f32, log10, 2.7, @log10(2.7));
+    try Test.do(f32, log1p, 0.01, @log(1.01));
+    try Test.do(f32, abs, -3.3, 3.3);
+    try Test.do(f32, floor, 2.7, 2.0);
+    try Test.do(f32, ceil, 2.7, 3.0);
+    try Test.do(f32, trunc, -2.7, -2.0);
+    try Test.do(f32, round, 2.7, 3.0);
+}
+
 /// Binary Function Definitions
 pub const BinaryFunction = enum {
     add,
