@@ -12,7 +12,6 @@ const VectorFunction2 = core.VectorFunction2;
 
 const isSIMD = core.isSIMDVector;
 
-
 /// Fill Options
 const FillOptions = struct {
     /// SIMD Vector Size

@@ -5,7 +5,6 @@ const testing = std.testing;
 
 const compat = @import("./compat.zig");
 
-
 const ScalarOrVector = enum {
     scalar,
     vector,
