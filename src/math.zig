@@ -58,6 +58,7 @@ test "fill" {
     try Test.do(.{ .simd_size = 0 });
 }
 
+/// Unary Function Definition
 pub const UnaryFunction = enum {
     sqrt,
     sin,
@@ -104,6 +105,10 @@ const UnaryOptions = struct {
     simd_size: ?usize = null,
 };
 
+/// Call unary function
+///
+/// * `arg` can be scalar (`T`) or vector (`[]T`)
+/// * `out` must be vector (`[]T`)
 pub fn unary(comptime options: UnaryOptions, arg: anytype, out: anytype) void {
     const T = options.type;
     const O = options.type;
