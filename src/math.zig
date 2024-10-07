@@ -415,3 +415,134 @@ test "binary" {
     try Test.do(.{ .type = u16, .f = .eq }, 2, 4, false);
     try Test.do(.{ .type = u16, .f = .eq, .simd_size = 0 }, 2, 4, false);
 }
+
+pub fn add(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
+    binary(.{ .type = T, .f = .add }, arg1, arg2, out);
+}
+
+pub fn wrapAdd(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
+    binary(.{ .type = T, .f = .wrap_add }, arg1, arg2, out);
+}
+
+pub fn saturateAdd(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
+    binary(.{ .type = T, .f = .sat_add }, arg1, arg2, out);
+}
+
+pub fn sub(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
+    binary(.{ .type = T, .f = .sub }, arg1, arg2, out);
+}
+
+pub fn wrapSub(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
+    binary(.{ .type = T, .f = .wrap_sub }, arg1, arg2, out);
+}
+
+pub fn saturateSub(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
+    binary(.{ .type = T, .f = .sat_sub }, arg1, arg2, out);
+}
+
+pub fn mul(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
+    binary(.{ .type = T, .f = .mul }, arg1, arg2, out);
+}
+
+pub fn wrapMul(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
+    binary(.{ .type = T, .f = .wrap_mul }, arg1, arg2, out);
+}
+
+pub fn saturateMul(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
+    binary(.{ .type = T, .f = .sat_mul }, arg1, arg2, out);
+}
+
+pub fn div(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
+    binary(.{ .type = T, .f = .div }, arg1, arg2, out);
+}
+
+pub fn rem(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
+    binary(.{ .type = T, .f = .rem }, arg1, arg2, out);
+}
+
+pub fn bitAnd(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
+    binary(.{ .type = T, .f = .bit_and }, arg1, arg2, out);
+}
+
+pub fn bitOr(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
+    binary(.{ .type = T, .f = .bit_or }, arg1, arg2, out);
+}
+
+pub fn bitXor(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
+    binary(.{ .type = T, .f = .bit_xor }, arg1, arg2, out);
+}
+
+pub fn eq(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
+    binary(.{ .type = T, .f = .eq }, arg1, arg2, out);
+}
+
+pub fn neq(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
+    binary(.{ .type = T, .f = .neq }, arg1, arg2, out);
+}
+
+pub fn gt(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
+    binary(.{ .type = T, .f = .gt }, arg1, arg2, out);
+}
+
+pub fn gte(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
+    binary(.{ .type = T, .f = .gte }, arg1, arg2, out);
+}
+
+pub fn lt(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
+    binary(.{ .type = T, .f = .lt }, arg1, arg2, out);
+}
+
+pub fn lte(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
+    binary(.{ .type = T, .f = .lte }, arg1, arg2, out);
+}
+
+test "explicit binary" {
+    const N = 100;
+
+    const Test = struct {
+        fn do(comptime T: type, comptime f: anytype, a1: anytype, a2: anytype, o: anytype) !void {
+            var arg1 = std.ArrayList(T).init(testing.allocator);
+            defer arg1.deinit();
+            try arg1.appendNTimes(a1, N);
+
+            var arg2 = std.ArrayList(T).init(testing.allocator);
+            defer arg2.deinit();
+            try arg2.appendNTimes(a2, N);
+
+            const O = if (@TypeOf(o) == bool) bool else T;
+
+            var out = std.ArrayList(O).init(testing.allocator);
+            defer out.deinit();
+            try out.resize(N);
+
+            var true_out = std.ArrayList(O).init(testing.allocator);
+            defer true_out.deinit();
+            try true_out.appendNTimes(o, N);
+
+            f(T, arg1.items, arg2.items, out.items);
+
+            try testing.expectEqualSlices(O, true_out.items, out.items);
+        }
+    };
+
+    try Test.do(u8, add, 15, 27, 42);
+    try Test.do(u8, wrapAdd, 200, 100, 44);
+    try Test.do(u8, saturateAdd, 200, 100, 255);
+    try Test.do(u8, sub, 27, 15, 12);
+    try Test.do(u8, wrapSub, 50, 100, 206);
+    try Test.do(u8, saturateSub, 10, 100, 0);
+    try Test.do(u8, mul, 5, 7, 35);
+    try Test.do(u8, wrapMul, 10, 26, 4);
+    try Test.do(u8, saturateMul, 200, 100, 255);
+    try Test.do(u8, div, 15, 3, 5);
+    try Test.do(u8, rem, 8, 3, 2);
+    try Test.do(u8, bitAnd, 8, 3, 0);
+    try Test.do(u8, bitOr, 8, 3, 11);
+    try Test.do(u8, bitXor, 8, 3, 11);
+    try Test.do(u8, eq, 8, 3, false);
+    try Test.do(u8, neq, 8, 3, true);
+    try Test.do(u8, gt, 8, 3, true);
+    try Test.do(u8, gte, 8, 3, true);
+    try Test.do(u8, lt, 8, 3, false);
+    try Test.do(u8, lte, 8, 3, false);
+}
