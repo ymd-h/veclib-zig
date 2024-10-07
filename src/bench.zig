@@ -42,6 +42,23 @@ fn run_bench2(comptime T: type, allocator: std.mem.Allocator, writer: anytype, c
     try bench(writer, name, f, .{ a, b, &c });
 }
 
+fn run_benchR(comptime T: type, allocator: std.mem.Allocator, writer: anytype, comptime name: []const u8, f: anytype, N: usize) !T {
+    var a = std.ArrayList(T).init(allocator);
+    defer a.deinit();
+    try a.appendNTimes(2, N);
+
+    const F = struct {
+        inline fn call(arg: std.ArrayList(T), ret: *T) void {
+            ret.* = f(arg);
+        }
+    };
+
+    var r: T = undefined;
+    try bench(writer, name, F.call, .{ a, &r });
+
+    return r;
+}
+
 fn Add(comptime T: type) type {
     return struct {
         fn for_loop(a: std.ArrayList(T), b: std.ArrayList(T), c: *std.ArrayList(T)) void {
@@ -68,6 +85,32 @@ fn Add(comptime T: type) type {
     };
 }
 
+fn Sum(comptime T: type) type {
+    return struct {
+        fn for_loop(a: std.ArrayList(T)) T {
+            var r = a.items[0];
+            for (a.items[1..]) |ai| {
+                r += ai;
+            }
+            return r;
+        }
+
+        fn vec_loop(a: std.ArrayList(T)) T {
+            const n = std.simd.suggestVectorLength(T).?;
+            const V = @Vector(n, T);
+
+            var rv: V = a.items[0..n].*;
+            var i: usize = n;
+            while (i < a.items.len) : (i += n) {
+                const av: V = a.items[i..][0..n].*;
+                rv += av;
+            }
+
+            return @reduce(.Add, rv);
+        }
+    };
+}
+
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
@@ -78,9 +121,13 @@ pub fn main() !void {
     _ = try stdout.write("\n");
 
     const N1 = 3_000_000;
-    try run_bench2(u32, allocator, stdout, "u32: naive for-loop    ", Add(u32).for_loop, 8 * N1);
-    try run_bench2(u32, allocator, stdout, "u32: handwriting vector", Add(u32).vec_loop, 8 * N1);
-    try run_bench2(u32, allocator, stdout, "u32: veclib            ", Add(u32).veclib_loop, 8 * N1);
+    try run_bench2(u32, allocator, stdout, "Add u32: naive for-loop    ", Add(u32).for_loop, 8 * N1);
+    try run_bench2(u32, allocator, stdout, "Add u32: handwriting vector", Add(u32).vec_loop, 8 * N1);
+    try run_bench2(u32, allocator, stdout, "Add u32: veclib            ", Add(u32).veclib_loop, 8 * N1);
+
+    const r1 = try run_benchR(u32, allocator, stdout, "Sum u32: native for-loop   ", Sum(u32).for_loop, 8 * N1);
+    const r2 = try run_benchR(u32, allocator, stdout, "Sum u32: handwriting vector", Sum(u32).vec_loop, 8 * N1);
+    std.debug.assert(r1 == r2);
 
     try bw.flush();
 }
