@@ -571,6 +571,8 @@ pub const ReductionFunction = enum {
     sat_prod,
     smallest,
     largest,
+    all,
+    any,
 };
 
 pub inline fn redFn(comptime f: ReductionFunction, a: anytype, b: @TypeOf(a)) @TypeOf(a) {
@@ -583,6 +585,8 @@ pub inline fn redFn(comptime f: ReductionFunction, a: anytype, b: @TypeOf(a)) @T
         .sat_prod => a *| b,
         .smallest => @min(a, b),
         .largest => @max(a, b),
+        .all => if (isSIMD(@TypeOf(a))) @select(bool, a, b, @as(@TypeOf(a), @splat(false))) else (a and b),
+        .any => if (isSIMD(@TypeOf(a))) @select(bool, a, @as(@TypeOf(a), @splat(true)), b) else (a or b),
     };
 }
 
@@ -687,4 +691,25 @@ test "smallest/largest" {
 
     try testing.expectEqual(4, smallest(u32, &a));
     try testing.expectEqual(95, largest(u32, &a));
+}
+
+pub fn all(arg: []const bool) bool {
+    return reduce(.{ .type = bool, .f = .all }, arg);
+}
+
+pub fn any(arg: []const bool) bool {
+    return reduce(.{ .type = bool, .f = .any }, arg);
+}
+
+test "all/any" {
+    const a = [_]bool{ true, false, false };
+    const b = [_]bool{ true, true, true };
+    const c = [_]bool{ false, false };
+
+    try testing.expect(!all(&a));
+    try testing.expect(any(&a));
+    try testing.expect(all(&b));
+    try testing.expect(any(&b));
+    try testing.expect(!all(&c));
+    try testing.expect(!any(&c));
 }

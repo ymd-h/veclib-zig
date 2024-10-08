@@ -70,6 +70,9 @@ pub const saturateProd = math.saturateProd;
 pub const smallest = math.smallest;
 pub const largest = math.largest;
 
+pub const all = math.all;
+pub const any = math.any;
+
 test "veclib" {
     _ = @import("./core.zig");
     _ = @import("./math.zig");
