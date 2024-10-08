@@ -2,9 +2,6 @@
 //!
 //! veclib provides SIMD based functions over slice `[]T`.
 
-const std = @import("std");
-const testing = std.testing;
-
 const core = @import("./core.zig");
 const math = @import("./math.zig");
 
