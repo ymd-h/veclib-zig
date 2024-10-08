@@ -2,14 +2,11 @@ const std = @import("std");
 const veclib = @import("./veclib.zig");
 
 fn bench(writer: anytype, comptime name: []const u8, f: anytype, args: anytype) !void {
-    const start = std.time.nanoTimestamp();
+    const start = std.time.microTimestamp();
     @call(.auto, f, args);
-    const end = std.time.nanoTimestamp();
+    const end = std.time.microTimestamp();
 
-    const elapsed_ns: u128 = @intCast(end - start);
-    const ns = @mod(elapsed_ns, 1000);
-
-    const elapsed_us = @divFloor(elapsed_ns, 1000);
+    const elapsed_us: u64 = @intCast(end - start);
     const us = @mod(elapsed_us, 1000);
 
     const elapsed_ms = @divFloor(elapsed_us, 1000);
@@ -21,8 +18,8 @@ fn bench(writer: anytype, comptime name: []const u8, f: anytype, args: anytype) 
     const elapsed_min = @divFloor(elapsed_sec, 60);
 
     try writer.print(
-        "{s}: {}min {d:0>2}s {d:0>3}ms {d:0>3}us {d:0>3}ns\n",
-        .{ name, elapsed_min, sec, ms, us, ns },
+        "{s}: {}min {d:0>2}s {d:0>3}ms {d:0>3}us\n",
+        .{ name, elapsed_min, sec, ms, us },
     );
 }
 
