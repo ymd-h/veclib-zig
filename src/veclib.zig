@@ -57,6 +57,15 @@ pub const gte = math.gte;
 pub const lt = math.lt;
 pub const lte = math.lte;
 
+// Reduce Function
+pub const reduce = math.reduce;
+pub const sum = math.sum;
+pub const wrapSum = math.wrapSum;
+pub const saturateSum = math.saturateSum;
+pub const prod = math.prod;
+pub const wrapProd = math.wrapProd;
+pub const saturateProd = math.saturateProd;
+
 test "veclib" {
     _ = @import("./core.zig");
     _ = @import("./math.zig");
