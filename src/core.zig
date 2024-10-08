@@ -443,11 +443,8 @@ pub fn VectorReductionFunction(comptime T: type, comptime vec_size: usize) type 
             }
 
             // ToDo: Can we use @reduce() builtin function?
-            var r = v[0];
             const a: [vec_size]T = v;
-            for (a[1..]) |vi| {
-                r = f(r, vi);
-            }
+            var r = Self.forLoop(f, a);
 
             if (rem > 0) {
                 r = f(r, Self.forLoop(f, arg1[i..]));
