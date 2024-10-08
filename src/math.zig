@@ -569,6 +569,8 @@ pub const ReductionFunction = enum {
     prod,
     wrap_prod,
     sat_prod,
+    smallest,
+    largest,
 };
 
 pub inline fn redFn(comptime f: ReductionFunction, a: anytype, b: @TypeOf(a)) @TypeOf(a) {
@@ -579,6 +581,8 @@ pub inline fn redFn(comptime f: ReductionFunction, a: anytype, b: @TypeOf(a)) @T
         .prod => a * b,
         .wrap_prod => a *% b,
         .sat_prod => a *| b,
+        .smallest => @min(a, b),
+        .largest => @max(a, b),
     };
 }
 
@@ -668,4 +672,19 @@ test "explicit reduce function" {
     try Test.do(u8, prod, 1, 1);
     try Test.do(u8, wrapProd, 2, 0);
     try Test.do(u4, saturateProd, 3, 15);
+}
+
+pub fn smallest(comptime T: type, arg: []const T) T {
+    return reduce(.{ .type = T, .f = .smallest }, arg);
+}
+
+pub fn largest(comptime T: type, arg: []const T) T {
+    return reduce(.{ .type = T, .f = .largest }, arg);
+}
+
+test "smallest/largest" {
+    const a = [_]u32{ 32, 4, 6, 95, 20 };
+
+    try testing.expectEqual(4, smallest(u32, &a));
+    try testing.expectEqual(95, largest(u32, &a));
 }
