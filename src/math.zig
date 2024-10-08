@@ -171,67 +171,67 @@ test "unary function" {
     try Test.do(.{ .type = f32, .f = .round }, 2.7, 3.0);
 }
 
-pub fn sqrt(comptime T: type, arg: anytype, out: anytype) void {
+pub fn sqrt(comptime T: type, arg: anytype, out: []T) void {
     unary(.{ .type = T, .f = .sqrt }, arg, out);
 }
 
-pub fn sin(comptime T: type, arg: anytype, out: anytype) void {
+pub fn sin(comptime T: type, arg: anytype, out: []T) void {
     unary(.{ .type = T, .f = .sin }, arg, out);
 }
 
-pub fn cos(comptime T: type, arg: anytype, out: anytype) void {
+pub fn cos(comptime T: type, arg: anytype, out: []T) void {
     unary(.{ .type = T, .f = .cos }, arg, out);
 }
 
-pub fn tan(comptime T: type, arg: anytype, out: anytype) void {
+pub fn tan(comptime T: type, arg: anytype, out: []T) void {
     unary(.{ .type = T, .f = .tan }, arg, out);
 }
 
-pub fn exp(comptime T: type, arg: anytype, out: anytype) void {
+pub fn exp(comptime T: type, arg: anytype, out: []T) void {
     unary(.{ .type = T, .f = .exp }, arg, out);
 }
 
-pub fn exp2(comptime T: type, arg: anytype, out: anytype) void {
+pub fn exp2(comptime T: type, arg: anytype, out: []T) void {
     unary(.{ .type = T, .f = .exp2 }, arg, out);
 }
 
-pub fn exp1m(comptime T: type, arg: anytype, out: anytype) void {
+pub fn exp1m(comptime T: type, arg: anytype, out: []T) void {
     unary(.{ .type = T, .f = .exp1m }, arg, out);
 }
 
-pub fn log(comptime T: type, arg: anytype, out: anytype) void {
+pub fn log(comptime T: type, arg: anytype, out: []T) void {
     unary(.{ .type = T, .f = .log }, arg, out);
 }
 
-pub fn log2(comptime T: type, arg: anytype, out: anytype) void {
+pub fn log2(comptime T: type, arg: anytype, out: []T) void {
     unary(.{ .type = T, .f = .log2 }, arg, out);
 }
 
-pub fn log10(comptime T: type, arg: anytype, out: anytype) void {
+pub fn log10(comptime T: type, arg: anytype, out: []T) void {
     unary(.{ .type = T, .f = .log10 }, arg, out);
 }
 
-pub fn log1p(comptime T: type, arg: anytype, out: anytype) void {
+pub fn log1p(comptime T: type, arg: anytype, out: []T) void {
     unary(.{ .type = T, .f = .log1p }, arg, out);
 }
 
-pub fn abs(comptime T: type, arg: anytype, out: anytype) void {
+pub fn abs(comptime T: type, arg: anytype, out: []T) void {
     unary(.{ .type = T, .f = .abs }, arg, out);
 }
 
-pub fn floor(comptime T: type, arg: anytype, out: anytype) void {
+pub fn floor(comptime T: type, arg: anytype, out: []T) void {
     unary(.{ .type = T, .f = .floor }, arg, out);
 }
 
-pub fn ceil(comptime T: type, arg: anytype, out: anytype) void {
+pub fn ceil(comptime T: type, arg: anytype, out: []T) void {
     unary(.{ .type = T, .f = .ceil }, arg, out);
 }
 
-pub fn trunc(comptime T: type, arg: anytype, out: anytype) void {
+pub fn trunc(comptime T: type, arg: anytype, out: []T) void {
     unary(.{ .type = T, .f = .trunc }, arg, out);
 }
 
-pub fn round(comptime T: type, arg: anytype, out: anytype) void {
+pub fn round(comptime T: type, arg: anytype, out: []T) void {
     unary(.{ .type = T, .f = .round }, arg, out);
 }
 
@@ -421,91 +421,91 @@ test "binary" {
     try Test.do(.{ .type = u16, .f = .eq, .simd_size = 0 }, 2, 4, false);
 }
 
-pub fn add(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
+pub fn add(comptime T: type, arg1: anytype, arg2: anytype, out: []T) void {
     binary(.{ .type = T, .f = .add }, arg1, arg2, out);
 }
 
-pub fn wrapAdd(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
+pub fn wrapAdd(comptime T: type, arg1: anytype, arg2: anytype, out: []T) void {
     binary(.{ .type = T, .f = .wrap_add }, arg1, arg2, out);
 }
 
-pub fn saturateAdd(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
+pub fn saturateAdd(comptime T: type, arg1: anytype, arg2: anytype, out: []T) void {
     binary(.{ .type = T, .f = .sat_add }, arg1, arg2, out);
 }
 
-pub fn sub(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
+pub fn sub(comptime T: type, arg1: anytype, arg2: anytype, out: []T) void {
     binary(.{ .type = T, .f = .sub }, arg1, arg2, out);
 }
 
-pub fn wrapSub(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
+pub fn wrapSub(comptime T: type, arg1: anytype, arg2: anytype, out: []T) void {
     binary(.{ .type = T, .f = .wrap_sub }, arg1, arg2, out);
 }
 
-pub fn saturateSub(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
+pub fn saturateSub(comptime T: type, arg1: anytype, arg2: anytype, out: []T) void {
     binary(.{ .type = T, .f = .sat_sub }, arg1, arg2, out);
 }
 
-pub fn mul(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
+pub fn mul(comptime T: type, arg1: anytype, arg2: anytype, out: []T) void {
     binary(.{ .type = T, .f = .mul }, arg1, arg2, out);
 }
 
-pub fn wrapMul(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
+pub fn wrapMul(comptime T: type, arg1: anytype, arg2: anytype, out: []T) void {
     binary(.{ .type = T, .f = .wrap_mul }, arg1, arg2, out);
 }
 
-pub fn saturateMul(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
+pub fn saturateMul(comptime T: type, arg1: anytype, arg2: anytype, out: []T) void {
     binary(.{ .type = T, .f = .sat_mul }, arg1, arg2, out);
 }
 
-pub fn div(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
+pub fn div(comptime T: type, arg1: anytype, arg2: anytype, out: []T) void {
     binary(.{ .type = T, .f = .div }, arg1, arg2, out);
 }
 
-pub fn rem(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
+pub fn rem(comptime T: type, arg1: anytype, arg2: anytype, out: []T) void {
     binary(.{ .type = T, .f = .rem }, arg1, arg2, out);
 }
 
-pub fn bitAnd(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
+pub fn bitAnd(comptime T: type, arg1: anytype, arg2: anytype, out: []T) void {
     binary(.{ .type = T, .f = .bit_and }, arg1, arg2, out);
 }
 
-pub fn bitOr(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
+pub fn bitOr(comptime T: type, arg1: anytype, arg2: anytype, out: []T) void {
     binary(.{ .type = T, .f = .bit_or }, arg1, arg2, out);
 }
 
-pub fn bitXor(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
+pub fn bitXor(comptime T: type, arg1: anytype, arg2: anytype, out: []T) void {
     binary(.{ .type = T, .f = .bit_xor }, arg1, arg2, out);
 }
 
-pub fn eq(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
+pub fn eq(comptime T: type, arg1: anytype, arg2: anytype, out: []bool) void {
     binary(.{ .type = T, .f = .eq }, arg1, arg2, out);
 }
 
-pub fn neq(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
+pub fn neq(comptime T: type, arg1: anytype, arg2: anytype, out: []bool) void {
     binary(.{ .type = T, .f = .neq }, arg1, arg2, out);
 }
 
-pub fn gt(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
+pub fn gt(comptime T: type, arg1: anytype, arg2: anytype, out: []bool) void {
     binary(.{ .type = T, .f = .gt }, arg1, arg2, out);
 }
 
-pub fn gte(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
+pub fn gte(comptime T: type, arg1: anytype, arg2: anytype, out: []bool) void {
     binary(.{ .type = T, .f = .gte }, arg1, arg2, out);
 }
 
-pub fn lt(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
+pub fn lt(comptime T: type, arg1: anytype, arg2: anytype, out: []bool) void {
     binary(.{ .type = T, .f = .lt }, arg1, arg2, out);
 }
 
-pub fn lte(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
+pub fn lte(comptime T: type, arg1: anytype, arg2: anytype, out: []bool) void {
     binary(.{ .type = T, .f = .lte }, arg1, arg2, out);
 }
 
-pub fn min(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
+pub fn min(comptime T: type, arg1: anytype, arg2: anytype, out: []T) void {
     binary(.{ .type = T, .f = .min }, arg1, arg2, out);
 }
 
-pub fn max(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
+pub fn max(comptime T: type, arg1: anytype, arg2: anytype, out: []T) void {
     binary(.{ .type = T, .f = .max }, arg1, arg2, out);
 }
 
