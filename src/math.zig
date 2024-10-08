@@ -9,6 +9,7 @@ const core = @import("./core.zig");
 const VectorFunction0 = core.VectorFunction0;
 const VectorFunction1 = core.VectorFunction1;
 const VectorFunction2 = core.VectorFunction2;
+const VectorReductionFunction = core.VectorReductionFunction;
 
 const isSIMD = core.isSIMDVector;
 
@@ -545,4 +546,66 @@ test "explicit binary" {
     try Test.do(u8, gte, 8, 3, true);
     try Test.do(u8, lt, 8, 3, false);
     try Test.do(u8, lte, 8, 3, false);
+}
+
+pub const ReductionFunction = enum {
+    sum,
+    wrap_sum,
+    sat_sum,
+    prod,
+    wrap_prod,
+    sat_prod,
+};
+
+pub inline fn redFn(comptime f: ReductionFunction, a: anytype, b: @TypeOf(a)) @TypeOf(a) {
+    return switch (f) {
+        .sum => a + b,
+        .wrap_sum => a +% b,
+        .sat_sum => a +| b,
+        .prod => a * b,
+        .wrap_prod => a *% b,
+        .sat_prod => a *| b,
+    };
+}
+
+const ReductionOptions = struct {
+    type: type,
+    f: ReductionFunction,
+    simd_size: ?usize = null,
+};
+
+pub fn reduce(comptime options: ReductionOptions, arg: []const options.type) options.type {
+    const size = options.simd_size orelse (std.simd.suggestVectorLength(options.type) orelse 0);
+    const VR = VectorReductionFunction(options.type, size);
+
+    const FR = struct {
+        inline fn call(a: anytype, b: @TypeOf(a)) @TypeOf(a) {
+            return redFn(options.f, a, b);
+        }
+    };
+
+    return VR.call(FR.call, arg);
+}
+
+test "Reduce" {
+    const N = 100;
+
+    const Test = struct {
+        fn do(comptime opt: ReductionOptions, a: anytype, r: anytype) !void {
+            var arg = std.ArrayList(opt.type).init(testing.allocator);
+            defer arg.deinit();
+            try arg.appendNTimes(a, N);
+
+            const result = reduce(opt, arg.items);
+            try testing.expectEqual(r, result);
+        }
+    };
+
+    try Test.do(.{ .type = u8, .f = .sum }, 2, 200);
+    try Test.do(.{ .type = u8, .f = .sum, .simd_size = 0 }, 2, 200);
+    try Test.do(.{ .type = u7, .f = .wrap_sum }, 2, 72);
+    try Test.do(.{ .type = u4, .f = .sat_sum }, 3, 15);
+    try Test.do(.{ .type = u8, .f = .prod }, 1, 1);
+    try Test.do(.{ .type = u8, .f = .wrap_prod }, 2, 0);
+    try Test.do(.{ .type = u4, .f = .sat_prod }, 3, 15);
 }
