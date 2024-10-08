@@ -300,6 +300,8 @@ pub const BinaryFunction = enum {
     gte,
     lt,
     lte,
+    min,
+    max,
 };
 
 inline fn biFn(comptime T: type, comptime f: BinaryFunction, a: anytype, b: anytype) T {
@@ -324,6 +326,8 @@ inline fn biFn(comptime T: type, comptime f: BinaryFunction, a: anytype, b: anyt
         .gte => a >= b,
         .lt => a < b,
         .lte => a <= b,
+        .min => @min(a, b),
+        .max => @max(a, b),
     };
 }
 
@@ -497,6 +501,14 @@ pub fn lte(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
     binary(.{ .type = T, .f = .lte }, arg1, arg2, out);
 }
 
+pub fn min(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
+    binary(.{ .type = T, .f = .min }, arg1, arg2, out);
+}
+
+pub fn max(comptime T: type, arg1: anytype, arg2: anytype, out: anytype) void {
+    binary(.{ .type = T, .f = .max }, arg1, arg2, out);
+}
+
 test "explicit binary" {
     const N = 100;
 
@@ -546,6 +558,8 @@ test "explicit binary" {
     try Test.do(u8, gte, 8, 3, true);
     try Test.do(u8, lt, 8, 3, false);
     try Test.do(u8, lte, 8, 3, false);
+    try Test.do(u8, min, 4, 3, 3);
+    try Test.do(u8, max, 4, 3, 4);
 }
 
 pub const ReductionFunction = enum {
