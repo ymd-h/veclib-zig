@@ -108,6 +108,10 @@ fn Sum(comptime T: type) type {
 
             return @reduce(.Add, rv);
         }
+
+        fn veclib_loop(a: std.ArrayList(T)) T {
+            return veclib.reduce(.{ .type = T, .f = .sum }, a.items);
+        }
     };
 }
 
@@ -127,7 +131,9 @@ pub fn main() !void {
 
     const r1 = try run_benchR(u32, allocator, stdout, "Sum u32: native for-loop   ", Sum(u32).for_loop, 8 * N1);
     const r2 = try run_benchR(u32, allocator, stdout, "Sum u32: handwriting vector", Sum(u32).vec_loop, 8 * N1);
+    const r3 = try run_benchR(u32, allocator, stdout, "Sum u32: veclib            ", Sum(u32).veclib_loop, 8 * N1);
     std.debug.assert(r1 == r2);
+    std.debug.assert(r2 == r3);
 
     try bw.flush();
 }
