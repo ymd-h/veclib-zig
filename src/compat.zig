@@ -3,9 +3,9 @@
 const std = @import("std");
 const version = @import("builtin").zig_version;
 
-const beforeV013 = (version.major == 0) and (version.minor < 13);
+const uptoV013 = (version.major == 0) and (version.minor <= 13);
 
 // Tag name of std.builtin.Type was changed at v0.13
-pub const pointer = if (beforeV013) .Pointer else .pointer;
-pub const array = if (beforeV013) .Array else .array;
-pub const vector = if (beforeV013) .Vector else .vector;
+pub const pointer = if (uptoV013) .Pointer else .pointer;
+pub const array = if (uptoV013) .Array else .array;
+pub const vector = if (uptoV013) .Vector else .vector;
