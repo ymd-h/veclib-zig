@@ -435,7 +435,7 @@ pub fn VectorReductionFunction(comptime T: type, comptime vec_size: usize) type 
             const rem = @mod(arg1.len, vec_size);
             const n = arg1.len - rem;
 
-            var v = arg1[0..vec_size].*;
+            var v: Vec = arg1[0..vec_size].*;
             var i = vec_size;
             while (i < n) : (i += vec_size) {
                 const av: Vec = arg1[i..][0..vec_size].*;
@@ -444,12 +444,13 @@ pub fn VectorReductionFunction(comptime T: type, comptime vec_size: usize) type 
 
             // ToDo: Can we use @reduce() builtin function?
             var r = v[0];
-            for (v[1..]) |vi| {
+            const a: [vec_size]T = v;
+            for (a[1..]) |vi| {
                 r = f(r, vi);
             }
 
             if (rem > 0) {
-                r = f(r, Self.forLoop(f, v[i..]));
+                r = f(r, Self.forLoop(f, arg1[i..]));
             }
             return r;
         }
