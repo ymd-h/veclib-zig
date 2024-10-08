@@ -609,3 +609,49 @@ test "Reduce" {
     try Test.do(.{ .type = u8, .f = .wrap_prod }, 2, 0);
     try Test.do(.{ .type = u4, .f = .sat_prod }, 3, 15);
 }
+
+pub fn sum(comptime T: type, arg: []const T) T {
+    return reduce(.{ .type = T, .f = .sum }, arg);
+}
+
+pub fn wrapSum(comptime T: type, arg: []const T) T {
+    return reduce(.{ .type = T, .f = .wrap_sum }, arg);
+}
+
+pub fn saturateSum(comptime T: type, arg: []const T) T {
+    return reduce(.{ .type = T, .f = .sat_sum }, arg);
+}
+
+pub fn prod(comptime T: type, arg: []const T) T {
+    return reduce(.{ .type = T, .f = .prod }, arg);
+}
+
+pub fn wrapProd(comptime T: type, arg: []const T) T {
+    return reduce(.{ .type = T, .f = .wrap_prod }, arg);
+}
+
+pub fn saturateProd(comptime T: type, arg: []const T) T {
+    return reduce(.{ .type = T, .f = .sat_prod }, arg);
+}
+
+test "explicit reduce function" {
+    const N = 100;
+
+    const Test = struct {
+        fn do(comptime T: type, f: anytype, a: anytype, r: anytype) !void {
+            var arg = std.ArrayList(T).init(testing.allocator);
+            defer arg.deinit();
+            try arg.appendNTimes(a, N);
+
+            const result = f(T, arg.items);
+            try testing.expectEqual(r, result);
+        }
+    };
+
+    try Test.do(u8, sum, 2, 200);
+    try Test.do(u7, wrapSum, 2, 72);
+    try Test.do(u4, saturateSum, 3, 15);
+    try Test.do(u8, prod, 1, 1);
+    try Test.do(u8, wrapProd, 2, 0);
+    try Test.do(u4, saturateProd, 3, 15);
+}
