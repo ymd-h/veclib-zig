@@ -56,6 +56,8 @@ pub const gt = math.gt;
 pub const gte = math.gte;
 pub const lt = math.lt;
 pub const lte = math.lte;
+pub const min = math.min;
+pub const max = math.max;
 
 // Reduce Function
 pub const reduce = math.reduce;
@@ -65,6 +67,8 @@ pub const saturateSum = math.saturateSum;
 pub const prod = math.prod;
 pub const wrapProd = math.wrapProd;
 pub const saturateProd = math.saturateProd;
+pub const smallest = math.smallest;
+pub const largest = math.largest;
 
 test "veclib" {
     _ = @import("./core.zig");
