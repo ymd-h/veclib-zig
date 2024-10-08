@@ -37,4 +37,13 @@ pub fn build(b: *std.Build) void {
     const run_mod_tests = b.addRunArtifact(mod_tests);
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&run_mod_tests.step);
+
+    const gen_doc = b.addInstallDirectory(.{
+        .source_dir = mod_tests.getEmittedDocs(),
+        .install_dir = .prefix,
+        .install_subdir = "./doc",
+    });
+
+    const doc_step = b.step("doc", "Generate documents");
+    doc_step.dependOn(&gen_doc.step);
 }
