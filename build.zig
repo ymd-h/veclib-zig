@@ -29,6 +29,7 @@ pub fn build(b: *std.Build) void {
     run_step.dependOn(&run_cmd.step);
 
     const mod_tests = b.addTest(.{
+        .name = "veclib",
         .root_source_file = b.path("src/veclib.zig"),
         .target = target,
         .optimize = optimize,
