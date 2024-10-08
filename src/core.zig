@@ -407,3 +407,83 @@ test "Vector Function 2" {
     // Without SIMD
     try TestV2.do_test(VectorFunction2(f32, f32, f32, 0));
 }
+
+pub fn VectorReductionFunction(comptime T: type, comptime vec_size: usize) type {
+    return struct {
+        const Self = @This();
+        const Vec = @Vector(vec_size, T);
+
+        pub fn ReturnType(comptime A: type) type {
+            comptime {
+                return if (isSIMDVector(A)) Vec else T;
+            }
+        }
+
+        fn forLoop(comptime f: anytype, arg1: anytype) T {
+            var r = arg1[0];
+            for (arg1[1..]) |ai| {
+                r = f(r, ai);
+            }
+            return r;
+        }
+
+        pub fn call(comptime f: anytype, arg1: anytype) T {
+            if ((vec_size < 2) or (arg1.len < vec_size)) {
+                return Self.forLoop(f, arg1);
+            }
+
+            const rem = @mod(arg1.len, vec_size);
+            const n = arg1.len - rem;
+
+            var v = arg1[0..vec_size].*;
+            var i = vec_size;
+            while (i < n) : (i += vec_size) {
+                const av: Vec = arg1[i..][0..vec_size].*;
+                v = f(v, av);
+            }
+
+            // ToDo: Can we use @reduce() builtin function?
+            var r = v[0];
+            for (v[1..]) |vi| {
+                r = f(r, vi);
+            }
+
+            if (rem > 0) {
+                r = f(r, Self.forLoop(f, v[i..]));
+            }
+            return r;
+        }
+    };
+}
+
+test "Vector Reduction" {
+    const N = 100;
+
+    const Test = struct {
+        fn do(comptime T: type, comptime size: ?usize, f: anytype, a: T, o: T) !void {
+            var arg = std.ArrayList(T).init(testing.allocator);
+            defer arg.deinit();
+            try arg.appendNTimes(a, N);
+
+            const vec_size = size orelse (std.simd.suggestVectorLength(T) orelse 0);
+            const VR = VectorReductionFunction(T, vec_size);
+
+            const r = VR.call(f, arg.items);
+            try testing.expectEqual(o, r);
+        }
+    };
+
+    const Reduction = struct {
+        fn add(a: anytype, b: anytype) @TypeOf(a, b) {
+            return a + b;
+        }
+
+        fn prod(a: anytype, b: anytype) @TypeOf(a, b) {
+            return a * b;
+        }
+    };
+
+    try Test.do(u32, null, Reduction.add, 2, 200);
+    try Test.do(u32, 0, Reduction.add, 2, 200);
+    try Test.do(u128, null, Reduction.prod, 2, 1 << 100);
+}
