@@ -704,6 +704,74 @@ test "ternary" {
     try Test.do(.{ .type = f32, .f = .clip }, 1.3, 1.5, 2.0, 1.5);
 }
 
+pub fn mulAdd(comptime T: type, arg1: anytype, arg2: anytype, arg3: anytype, out: []T) void {
+    ternary(.{ .type = T, .f = .mulAdd }, arg1, arg2, arg3, out);
+}
+
+pub fn clip(comptime T: type, arg1: anytype, arg2: anytype, arg3: anytype, out: []T) void {
+    ternary(.{ .type = T, .f = .clip }, arg1, arg2, arg3, out);
+}
+
+test "explicit ternary" {
+    const N = 10;
+
+    const Test = struct {
+        fn do(comptime T: type, f: anytype, a: anytype, b: anytype, c: anytype, o: anytype) !void {
+            var a1 = std.ArrayList(T).init(testing.allocator);
+            defer a1.deinit();
+            try a1.appendNTimes(a, N);
+
+            var a2 = std.ArrayList(T).init(testing.allocator);
+            defer a2.deinit();
+            try a2.appendNTimes(b, N);
+
+            var a3 = std.ArrayList(T).init(testing.allocator);
+            defer a3.deinit();
+            try a3.appendNTimes(c, N);
+
+            var true_out = std.ArrayList(T).init(testing.allocator);
+            defer true_out.deinit();
+            try true_out.appendNTimes(o, N);
+
+            var out = std.ArrayList(T).init(testing.allocator);
+            defer out.deinit();
+            try out.resize(N);
+
+            f(T, a1.items, a2.items, a3.items, out.items);
+            for (true_out.items, out.items) |ti, oi| {
+                try testing.expectApproxEqRel(ti, oi, 1e-6);
+            }
+
+            out.clearRetainingCapacity();
+            try out.resize(N);
+
+            f(T, a, a2.items, a3.items, out.items);
+            for (true_out.items, out.items) |ti, oi| {
+                try testing.expectApproxEqRel(ti, oi, 1e-6);
+            }
+
+            out.clearRetainingCapacity();
+            try out.resize(N);
+
+            f(T, a1.items, b, a3.items, out.items);
+            for (true_out.items, out.items) |ti, oi| {
+                try testing.expectApproxEqRel(ti, oi, 1e-6);
+            }
+
+            out.clearRetainingCapacity();
+            try out.resize(N);
+
+            f(T, a1.items, a2.items, c, out.items);
+            for (true_out.items, out.items) |ti, oi| {
+                try testing.expectApproxEqRel(ti, oi, 1e-6);
+            }
+        }
+    };
+
+    try Test.do(f32, mulAdd, 3.2, 1.5, 4.3, 3.2 * 1.5 + 4.3);
+    try Test.do(f32, clip, 1.5, 1.0, 1.3, 1.3);
+}
+
 pub const ReductionFunction = enum {
     sum,
     wrap_sum,
