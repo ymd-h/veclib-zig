@@ -746,7 +746,7 @@ pub fn any(arg: []const bool) bool {
 }
 
 test "all/any" {
-    const a = [_]bool{ true, false, false };
+    const a = [_]bool{ true, false, false, false, false, true, false, true, false };
     const b = [_]bool{ true, true, true };
     const c = [_]bool{ false, false };
 
