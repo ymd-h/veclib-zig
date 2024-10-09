@@ -4,6 +4,10 @@
 > [!WARNING]
 > This project is still under development.
 
+veclib utilizes Zig standard SIMD vector calculation.
+Aside from the standard, veclib supports scalar-vector mixed calculation
+and runtime-known length slice handling.
+
 
 ## Features
 
