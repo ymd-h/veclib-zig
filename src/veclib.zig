@@ -20,6 +20,9 @@
 //!   - `bitAdd`, `bitOr`, `bitXor`
 //!   - `min`, `max`
 //!   - `eq`, `neq`, `gt`, `gte`, `lt`, `lte`,
+//! - Element-wise Ternary Functions
+//!   - `mulAdd`
+//!   - `clip`
 //! - Reduction Functions
 //!   - `sum`, `wrapSum`, `saturateSum`,
 //!   - `prod`, `wrapProd`, `saturateProd`,
@@ -38,6 +41,7 @@ pub const VectorReductionFunction = core.VectorReductionFunction;
 pub const fill = math.fill;
 pub const unary = math.unary;
 pub const binary = math.binary;
+pub const ternary = math.ternary;
 
 // Unary Function
 pub const sqrt = math.sqrt;
@@ -85,6 +89,10 @@ pub const lt = math.lt;
 pub const lte = math.lte;
 pub const min = math.min;
 pub const max = math.max;
+
+// Ternary Function
+pub const mulAdd = math.mulAdd;
+pub const clip = math.clip;
 
 // Reduce Function
 pub const reduce = math.reduce;

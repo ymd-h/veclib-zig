@@ -25,6 +25,9 @@
   - `min`, `max`
 - Element-wise Binary Comparison (`f(comptime T: type, arg1: anytype, arg2: anytype, out: [] bool) void`)
   - `eq`, `neq`, `gt`, `gte`, `lt`, `lte`,
+- Ternary Function (`f(comptime T: type, arg1: anytype, arg2: anytype, arg3: anytype, out: []T)`)
+  - `mulAdd`
+  - `clip`
 - Reduction Function (`f(comptime T: type, arg: []const T) T`)
   - `sum`, `wrapSum`, `saturateSum`,
   - `prod`, `wrapProd`, `saturateProd`,
