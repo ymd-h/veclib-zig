@@ -32,6 +32,7 @@ const math = @import("./math.zig");
 pub const VectorFunction0 = core.VectorFunction0;
 pub const VectorFunction1 = core.VectorFunction1;
 pub const VectorFunction2 = core.VectorFunction2;
+pub const VectorFunction3 = core.VectorFunction3;
 pub const VectorReductionFunction = core.VectorReductionFunction;
 
 pub const fill = math.fill;

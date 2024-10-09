@@ -9,6 +9,7 @@ const core = @import("./core.zig");
 const VectorFunction0 = core.VectorFunction0;
 const VectorFunction1 = core.VectorFunction1;
 const VectorFunction2 = core.VectorFunction2;
+const VectorFunction3 = core.VectorFunction3;
 const VectorReductionFunction = core.VectorReductionFunction;
 
 const isSIMD = core.isSIMDVector;
@@ -604,6 +605,103 @@ test "explicit binary" {
     try Test.do(u8, lte, 8, 3, false);
     try Test.do(u8, min, 4, 3, 3);
     try Test.do(u8, max, 4, 3, 4);
+}
+
+pub const TernaryFunction = enum {
+    mulAdd,
+    clip,
+};
+
+inline fn triFn(comptime T: type, comptime f: TernaryFunction, a1: anytype, a2: anytype, a3: anytype) T {
+    return switch (f) {
+        .mulAdd => @mulAdd(T, a1, a2, a3),
+        .clip => @max(a2, @min(a1, a3)),
+    };
+}
+
+const TernaryOptions = struct {
+    type: type,
+    f: TernaryFunction,
+    simd_size: ?usize = null,
+};
+
+pub fn ternary(comptime options: TernaryOptions, arg1: anytype, arg2: anytype, arg3: anytype, out: anytype) void {
+    const T = options.type;
+    const size = options.simd_size orelse (std.simd.suggestVectorLength(T) orelse 0);
+
+    const V3 = VectorFunction3(T, T, T, T, size);
+    const F3 = struct {
+        inline fn call(a1: anytype, a2: anytype, a3: anytype) V3.ReturnType(@TypeOf(a1)) {
+            return triFn(V3.ReturnType(@TypeOf(a1)), options.f, a1, a2, a3);
+        }
+    };
+
+    V3.call(F3.call, arg1, arg2, arg3, out);
+}
+
+test "ternary" {
+    const N = 100;
+
+    const Test = struct {
+        fn do(comptime opt: TernaryOptions, a: anytype, b: anytype, c: anytype, o: anytype) !void {
+            var a1 = std.ArrayList(opt.type).init(testing.allocator);
+            defer a1.deinit();
+            try a1.appendNTimes(a, N);
+
+            var a2 = std.ArrayList(opt.type).init(testing.allocator);
+            defer a2.deinit();
+            try a2.appendNTimes(b, N);
+
+            var a3 = std.ArrayList(opt.type).init(testing.allocator);
+            defer a3.deinit();
+            try a3.appendNTimes(c, N);
+
+            var true_out = std.ArrayList(opt.type).init(testing.allocator);
+            defer true_out.deinit();
+            try true_out.appendNTimes(o, N);
+
+            var out = std.ArrayList(opt.type).init(testing.allocator);
+            defer out.deinit();
+            try out.resize(N);
+
+            ternary(opt, a1.items, a2.items, a3.items, out.items);
+            for (true_out.items, out.items) |ti, oi| {
+                try testing.expectApproxEqRel(ti, oi, 1e-6);
+            }
+
+            out.clearRetainingCapacity();
+            try out.resize(N);
+
+            ternary(opt, a, a2.items, a3.items, out.items);
+            for (true_out.items, out.items) |ti, oi| {
+                try testing.expectApproxEqRel(ti, oi, 1e-6);
+            }
+
+            out.clearRetainingCapacity();
+            try out.resize(N);
+
+            ternary(opt, a1.items, b, a3.items, out.items);
+            for (true_out.items, out.items) |ti, oi| {
+                try testing.expectApproxEqRel(ti, oi, 1e-6);
+            }
+
+            out.clearRetainingCapacity();
+            try out.resize(N);
+
+            ternary(opt, a1.items, a2.items, c, out.items);
+            for (true_out.items, out.items) |ti, oi| {
+                try testing.expectApproxEqRel(ti, oi, 1e-6);
+            }
+
+            out.clearRetainingCapacity();
+            try out.resize(N);
+        }
+    };
+
+    try Test.do(.{ .type = f32, .f = .mulAdd }, 3.2, 2.8, 1.2, 3.2 * 2.8 + 1.2);
+    try Test.do(.{ .type = f32, .f = .mulAdd, .simd_size = 0 }, 3.2, 2.8, 1.2, 3.2 * 2.8 + 1.2);
+    try Test.do(.{ .type = f32, .f = .clip }, 1.3, 0.2, 1.0, 1.0);
+    try Test.do(.{ .type = f32, .f = .clip }, 1.3, 1.5, 2.0, 1.5);
 }
 
 pub const ReductionFunction = enum {
