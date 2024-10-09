@@ -1,6 +1,29 @@
 //! veclib: SIMD based vector library
 //!
 //! veclib provides SIMD based functions over slice `[]T`.
+//!
+//! ## Functions
+//! - Element-wise Unary Functions
+//!   - `sqrt`
+//!   - `sin`, `cos`, `tan`
+//!   - `exp`, `exp2`, `exp1m`
+//!   - `log`, `log2`, `log10`, `log1p`
+//!   - `abs`
+//!   - `floor`, `ceil`, `trunc`, `round`
+//! - Element-wise Binary Functions
+//!   - `add`, `wrapAdd`, `saturateAdd`
+//!   - `sub`, `wrapSub`, `saturateSub`
+//!   - `mul`, `wrapMul`, `saturateMul`,
+//!   - `div`, `rem`
+//!   - `bitAdd`, `bitOr`, `bitXor`
+//!   - `min`, `max`
+//!   - `eq`, `neq`, `gt`, `gte`, `lt`, `lte`,
+//! - Reduction Functions
+//!   - `sum`, `wrapSum`, `saturateSum`,
+//!   - `prod`, `wrapProd`, `saturateProd`,
+//!   - `smallest`, `largest`,
+//!   - `all`, `any`
+
 
 const core = @import("./core.zig");
 const math = @import("./math.zig");
