@@ -292,7 +292,7 @@ pub fn VectorFunction2(comptime T1: type, comptime T2: type, comptime O: type, c
             }
         }
 
-        fn forLoop(comptime f: anytype, arg1: []const T1, arg2: []const T2, out: anytype) void {
+        inline fn forLoop(comptime f: anytype, arg1: []const T1, arg2: []const T2, out: anytype) void {
             for (arg1, arg2, out) |a1_i, a2_i, *oi| {
                 oi.* = f(a1_i, a2_i);
             }
@@ -422,7 +422,7 @@ pub fn VectorFunction3(comptime T1: type, comptime T2: type, comptime T3: type, 
             }
         }
 
-        fn forLoop(comptime f: anytype, arg1: anytype, arg2: anytype, arg3: anytype, out: anytype) void {
+        inline fn forLoop(comptime f: anytype, arg1: anytype, arg2: anytype, arg3: anytype, out: anytype) void {
             for (arg1, arg2, arg3, out) |a1, a2, a3, *o| {
                 o.* = f(a1, a2, a3);
             }
@@ -555,7 +555,7 @@ pub fn VectorReductionFunction(comptime T: type, comptime vec_size: usize) type 
             }
         }
 
-        fn forLoop(comptime f: anytype, arg1: []const T) T {
+        inline fn forLoop(comptime f: anytype, arg1: []const T) T {
             var r = arg1[0];
             for (arg1[1..]) |ai| {
                 r = f(r, ai);
