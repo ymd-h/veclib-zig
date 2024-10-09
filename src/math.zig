@@ -619,7 +619,7 @@ pub const ReductionFunction = enum {
     any,
 };
 
-pub inline fn redFn(comptime f: ReductionFunction, a: anytype, b: @TypeOf(a)) @TypeOf(a) {
+inline fn redFn(comptime f: ReductionFunction, a: anytype, b: @TypeOf(a)) @TypeOf(a) {
     return switch (f) {
         .sum => a + b,
         .wrap_sum => a +% b,
