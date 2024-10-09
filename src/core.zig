@@ -408,6 +408,142 @@ test "Vector Function 2" {
     try TestV2.do_test(VectorFunction2(f32, f32, f32, 0));
 }
 
+pub fn VectorFunction3(comptime T1: type, comptime T2: type, comptime T3: type, comptime O: type, comptime vec_size: usize) type {
+    return struct {
+        const Self = @This();
+        const Vec1 = @Vector(vec_size, T1);
+        const Vec2 = @Vector(vec_size, T2);
+        const Vec3 = @Vector(vec_size, T3);
+        const VecO = @Vector(vec_size, O);
+
+        pub fn ReturnType(comptime T: type) type {
+            comptime {
+                return if (isSIMDVector(T)) VecO else O;
+            }
+        }
+
+        fn forLoop(comptime f: anytype, arg1: anytype, arg2: anytype, arg3: anytype, out: anytype) void {
+            for (arg1, arg2, arg3, out) |a1, a2, a3, *o| {
+                o.* = f(a1, a2, a3);
+            }
+        }
+
+        pub fn call(comptime f: anytype, arg1: anytype, arg2: anytype, arg3: anytype, out: anytype) void {
+            validateOut(O, @TypeOf(out));
+
+            if (ScalarOrVector.which(T1, @TypeOf(arg1)) == .scalar) {
+                const V2 = VectorFunction2(T2, T3, O, vec_size);
+
+                const F2 = struct {
+                    inline fn call(a2: anytype, a3: anytype) V2.ReturnType(@TypeOf(a2)) {
+                        if (isSIMDVector(@TypeOf(a2))) {
+                            return f(@as(Vec1, @splat(arg1)), a2, a3);
+                        } else {
+                            return f(arg1, a2, a3);
+                        }
+                    }
+                };
+
+                return V2.call(F2.call, arg2, arg3, out);
+            }
+
+            if (ScalarOrVector.which(T2, @TypeOf(arg2)) == .scalar) {
+                const V2 = VectorFunction2(T1, T3, O, vec_size);
+
+                const F2 = struct {
+                    inline fn call(a1: anytype, a3: anytype) V2.ReturnType(@TypeOf(a1)) {
+                        if (isSIMDVector(@TypeOf(a1))) {
+                            return f(a1, @as(Vec2, @splat(arg2)), a3);
+                        } else {
+                            return f(a1, arg2, a3);
+                        }
+                    }
+                };
+
+                return V2.call(F2.call, arg1, arg3, out);
+            }
+
+            if (ScalarOrVector.which(T3, @TypeOf(arg3)) == .scalar) {
+                const V2 = VectorFunction2(T1, T2, O, vec_size);
+
+                const F2 = struct {
+                    inline fn call(a1: anytype, a2: anytype) V2.ReturnType(@TypeOf(a1)) {
+                        if (isSIMDVector(@TypeOf(a1))) {
+                            return f(a1, a2, @as(Vec3, @splat(arg3)));
+                        } else {
+                            return f(a1, a2, arg3);
+                        }
+                    }
+                };
+
+                return V2.call(F2.call, arg1, arg2, out);
+            }
+
+            if (vec_size < 2) {
+                return Self.forLoop(f, arg1, arg2, arg3, out);
+            }
+
+            const rem = @mod(out.len, vec_size);
+            if (rem > 0) {
+                Self.forLoop(f, arg1[0..rem], arg2[0..rem], arg3[0..rem], out[0..rem]);
+            }
+
+            var i = rem;
+            while (i < out.len) : (i += vec_size) {
+                const a1_v: Vec1 = arg1[i..][0..vec_size].*;
+                const a2_v: Vec2 = arg2[i..][0..vec_size].*;
+                const a3_v: Vec3 = arg3[i..][0..vec_size].*;
+                out[i..][0..vec_size].* = f(a1_v, a2_v, a3_v);
+            }
+        }
+    };
+}
+
+test "Vector Function 3" {
+    const N = 100;
+
+    const Test = struct {
+        fn do(comptime T: type, a: T, b: T, c: T, o: T, comptime vec_size: usize) !void {
+            var a1 = std.ArrayList(T).init(testing.allocator);
+            defer a1.deinit();
+            try a1.appendNTimes(a, N);
+
+            var a2 = std.ArrayList(T).init(testing.allocator);
+            defer a2.deinit();
+            try a2.appendNTimes(b, N);
+
+            var a3 = std.ArrayList(T).init(testing.allocator);
+            defer a3.deinit();
+            try a3.appendNTimes(c, N);
+
+            var true_out = std.ArrayList(T).init(testing.allocator);
+            defer true_out.deinit();
+            try true_out.appendNTimes(o, N);
+
+            var out = std.ArrayList(T).init(testing.allocator);
+            defer out.deinit();
+            try out.resize(N);
+
+            const V3 = VectorFunction3(T, T, T, T, vec_size);
+
+            const F = struct {
+                inline fn call(arg1: anytype, arg2: anytype, arg3: anytype) V3.ReturnType(@TypeOf(arg1)) {
+                    return @mulAdd(V3.ReturnType(@TypeOf(arg1)), arg1, arg2, arg3);
+                }
+            };
+
+            V3.call(F.call, a1.items, a2.items, a3.items, out.items);
+            for (true_out.items, out.items) |ti, oi| {
+                try testing.expectApproxEqRel(ti, oi, 1e-6);
+            }
+        }
+    };
+
+    const size = std.simd.suggestVectorLength(f32) orelse 0;
+    try Test.do(f32, 3.2, 2.5, 0.3, 3.2 * 2.5 + 0.3, size);
+    try Test.do(f32, 3.2, 2.5, 0.3, 3.2 * 2.5 + 0.3, 0);
+}
+
 pub fn VectorReductionFunction(comptime T: type, comptime vec_size: usize) type {
     return struct {
         const Self = @This();
