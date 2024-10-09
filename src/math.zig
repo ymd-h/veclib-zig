@@ -14,54 +14,9 @@ const VectorReductionFunction = core.VectorReductionFunction;
 
 const isSIMD = core.isSIMDVector;
 
-/// Copy Options
-const CopyOptions = struct {
-    /// SIMD Vector Size
-    simd_size: ?usize = null,
-};
-
-/// Copy values to Vector
-pub fn copy(comptime options: CopyOptions, value: anytype, out: anytype) void {
-    const T = core.ElementType(@TypeOf(out));
-    const size = options.simd_size orelse (std.simd.suggestVectorLength(T) orelse 0);
-    const V0 = VectorFunction0(T, size);
-
-    const Copy = struct {
-        inline fn call() T {
-            return value;
-        }
-    };
-
-    V0.call(Copy.call, out);
-}
-
-test "copy" {
-    const N = 10;
-
-    const Test = struct {
-        fn do(comptime o: CopyOptions) !void {
-            var out = std.ArrayList(f16).init(testing.allocator);
-            defer out.deinit();
-            try out.resize(N);
-
-            var true_out = std.ArrayList(f16).init(testing.allocator);
-            defer true_out.deinit();
-
-            copy(o, 1.5, out.items);
-            try true_out.appendNTimes(1.5, N);
-            try testing.expectEqualSlices(f16, true_out.items, out.items);
-        }
-    };
-
-    // With SIMD
-    try Test.do(.{});
-
-    // Without SIMD
-    try Test.do(.{ .simd_size = 0 });
-}
-
 /// Unary Function Definition
 pub const UnaryFunction = enum {
+    copy,
     sqrt,
     sin,
     cos,
