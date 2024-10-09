@@ -38,7 +38,7 @@ pub const VectorFunction2 = core.VectorFunction2;
 pub const VectorFunction3 = core.VectorFunction3;
 pub const VectorReductionFunction = core.VectorReductionFunction;
 
-pub const fill = math.fill;
+pub const copy = math.copy;
 pub const unary = math.unary;
 pub const binary = math.binary;
 pub const ternary = math.ternary;
