@@ -335,7 +335,10 @@ pub const BinaryFunction = enum {
     wrap_mul,
     sat_mul,
     div,
+    divFloor,
+    divTrunc,
     rem,
+    mod,
     bit_and,
     bit_or,
     bit_xor,
@@ -361,7 +364,10 @@ inline fn biFn(comptime T: type, comptime f: BinaryFunction, a: anytype, b: anyt
         .wrap_mul => a *% b,
         .sat_mul => a *| b,
         .div => a / b,
+        .divFloor => @divFloor(a, b),
+        .divTrunc => @divTrunc(a, b),
         .rem => a % b,
+        .mod => @mod(a, b),
         .bit_and => a & b,
         .bit_or => a | b,
         .bit_xor => a ^ b,
@@ -506,8 +512,20 @@ pub fn div(comptime T: type, arg1: anytype, arg2: anytype, out: []T) void {
     binary(.{ .type = T, .f = .div }, arg1, arg2, out);
 }
 
+pub fn divFloor(comptime T: type, arg1: anytype, arg2: anytype, out: []T) void {
+    binary(.{ .type = T, .f = .divFloor }, arg1, arg2, out);
+}
+
+pub fn divTrunc(comptime T: type, arg1: anytype, arg2: anytype, out: []T) void {
+    binary(.{ .type = T, .f = .divTrunc }, arg1, arg2, out);
+}
+
 pub fn rem(comptime T: type, arg1: anytype, arg2: anytype, out: []T) void {
     binary(.{ .type = T, .f = .rem }, arg1, arg2, out);
+}
+
+pub fn mod(comptime T: type, arg1: anytype, arg2: anytype, out: []T) void {
+    binary(.{ .type = T, .f = .mod }, arg1, arg2, out);
 }
 
 pub fn bitAnd(comptime T: type, arg1: anytype, arg2: anytype, out: []T) void {
@@ -593,7 +611,10 @@ test "explicit binary" {
     try Test.do(u8, wrapMul, 10, 26, 4);
     try Test.do(u8, saturateMul, 200, 100, 255);
     try Test.do(u8, div, 15, 3, 5);
+    try Test.do(u8, divFloor, 15, 4, 3);
+    try Test.do(i8, divTrunc, -15, 4, -3);
     try Test.do(u8, rem, 8, 3, 2);
+    try Test.do(i8, mod, -8, 3, 1);
     try Test.do(u8, bitAnd, 8, 3, 0);
     try Test.do(u8, bitOr, 8, 3, 11);
     try Test.do(u8, bitXor, 8, 3, 11);

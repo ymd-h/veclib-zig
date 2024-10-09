@@ -16,7 +16,7 @@
 //!   - `add`, `wrapAdd`, `saturateAdd`
 //!   - `sub`, `wrapSub`, `saturateSub`
 //!   - `mul`, `wrapMul`, `saturateMul`,
-//!   - `div`, `rem`
+//!   - `div`, `divFloor`, `divTrunc`, `rem`, `mod`
 //!   - `bitAdd`, `bitOr`, `bitXor`
 //!   - `min`, `max`
 //!   - `eq`, `neq`, `gt`, `gte`, `lt`, `lte`,
@@ -77,7 +77,10 @@ pub const mul = math.mul;
 pub const wrapMul = math.wrapMul;
 pub const saturateMul = math.saturateMul;
 pub const div = math.div;
+pub const divFloor = math.divFloor;
+pub const divTrunc = math.divTrunc;
 pub const rem = math.rem;
+pub const mod = math.mod;
 pub const bitAnd = math.bitAnd;
 pub const bitOr = math.bitOr;
 pub const bitXor = math.bitXor;

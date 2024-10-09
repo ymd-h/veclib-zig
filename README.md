@@ -20,7 +20,7 @@
   - `add`, `wrapAdd`, `saturateAdd`
   - `sub`, `wrapSub`, `saturateSub`
   - `mul`, `wrapMul`, `saturateMul`,
-  - `div`, `rem`
+  - `div`, `divFloor`, `divTrunc`, `rem`, `mod`
   - `bitAdd`, `bitOr`, `bitXor`
   - `min`, `max`
 - Element-wise Binary Comparison (`f(comptime T: type, arg1: anytype, arg2: anytype, out: [] bool) void`)
