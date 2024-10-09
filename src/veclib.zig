@@ -10,6 +10,8 @@
 //!   - `log`, `log2`, `log10`, `log1p`
 //!   - `abs`
 //!   - `floor`, `ceil`, `trunc`, `round`
+//!   - `byteSwap`, `bitReverse`
+//!   - `countLeadingZeros`, `countTrailingZeros`, `popCount`
 //! - Element-wise Binary Functions
 //!   - `add`, `wrapAdd`, `saturateAdd`
 //!   - `sub`, `wrapSub`, `saturateSub`
@@ -23,7 +25,6 @@
 //!   - `prod`, `wrapProd`, `saturateProd`,
 //!   - `smallest`, `largest`,
 //!   - `all`, `any`
-
 
 const core = @import("./core.zig");
 const math = @import("./math.zig");
@@ -54,6 +55,11 @@ pub const floor = math.floor;
 pub const ceil = math.ceil;
 pub const trunc = math.trunc;
 pub const round = math.round;
+pub const byteSwap = math.byteSwap;
+pub const bitReverse = math.bitReverse;
+pub const countLeadingZeros = math.countLeadingZeros;
+pub const countTrailingZeros = math.countTrailingZeros;
+pub const popCount = math.popCount;
 
 // Binary Function
 pub const add = math.add;

@@ -77,6 +77,11 @@ pub const UnaryFunction = enum {
     ceil,
     trunc,
     round,
+    byteSwap,
+    bitReverse,
+    countLeadingZeros,
+    countTrailingZeros,
+    popCount,
 };
 
 inline fn uniFn(comptime T: type, comptime f: UnaryFunction, a: anytype) T {
@@ -97,6 +102,11 @@ inline fn uniFn(comptime T: type, comptime f: UnaryFunction, a: anytype) T {
         .ceil => @ceil(a),
         .trunc => @trunc(a),
         .round => @round(a),
+        .byteSwap => @byteSwap(a),
+        .bitReverse => @bitReverse(a),
+        .countLeadingZeros => @clz(a),
+        .countTrailingZeros => @ctz(a),
+        .popCount => @popCount(a),
     };
 }
 
@@ -235,6 +245,26 @@ pub fn round(comptime T: type, arg: anytype, out: []T) void {
     unary(.{ .type = T, .f = .round }, arg, out);
 }
 
+pub fn byteSwap(comptime T: type, arg: anytype, out: []T) void {
+    unary(.{ .type = T, .f = .byteSwap }, arg, out);
+}
+
+pub fn bitReverse(comptime T: type, arg: anytype, out: []T) void {
+    unary(.{ .type = T, .f = .bitReverse }, arg, out);
+}
+
+pub fn countLeadingZeros(comptime T: type, arg: anytype, out: []T) void {
+    unary(.{ .type = T, .f = .countLeadingZeros }, arg, out);
+}
+
+pub fn countTrailingZeros(comptime T: type, arg: anytype, out: []T) void {
+    unary(.{ .type = T, .f = .countTrailingZeros }, arg, out);
+}
+
+pub fn popCount(comptime T: type, arg: anytype, out: []T) void {
+    unary(.{ .type = T, .f = .popCount }, arg, out);
+}
+
 test "explicit unary" {
     const N = 100;
 
@@ -254,8 +284,16 @@ test "explicit unary" {
 
             f(T, arg.items, out.items);
 
-            for (true_out.items, out.items) |ti, oi| {
-                try testing.expectApproxEqRel(ti, oi, 1e-6);
+            switch (@TypeOf(a)) {
+                comptime_float => {
+                    for (true_out.items, out.items) |ti, oi| {
+                        try testing.expectApproxEqRel(ti, oi, 1e-6);
+                    }
+                },
+                comptime_int => {
+                    try testing.expectEqualSlices(T, true_out.items, out.items);
+                },
+                else => @compileError(""),
             }
         }
     };
@@ -276,6 +314,12 @@ test "explicit unary" {
     try Test.do(f32, ceil, 2.7, 3.0);
     try Test.do(f32, trunc, -2.7, -2.0);
     try Test.do(f32, round, 2.7, 3.0);
+    try Test.do(u16, byteSwap, 1, 256);
+    try Test.do(u8, bitReverse, 182, 109);
+    try Test.do(u8, bitReverse, 128, 1);
+    try Test.do(u8, countLeadingZeros, 32, 2);
+    try Test.do(u8, countTrailingZeros, 32, 5);
+    try Test.do(u8, popCount, 31, 5);
 }
 
 /// Binary Function Definitions

@@ -14,6 +14,8 @@
   - `log`, `log2`, `log10`, `log1p`
   - `abs`
   - `floor`, `ceil`, `trunc`, `round`
+  - `byteSwap`, `bitReverse`
+  - `countLeadingZeros`, `countTrailingZeros`, `popCount`
 - Element-wise Binary Function (`f(comptime T: type, arg1: anytype, arg2: anytype, out: []T) void`)
   - `add`, `wrapAdd`, `saturateAdd`
   - `sub`, `wrapSub`, `saturateSub`
