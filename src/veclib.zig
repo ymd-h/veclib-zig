@@ -3,6 +3,8 @@
 //! veclib provides SIMD based functions over slice `[]T`.
 //!
 //! ## Functions
+//! - Nullary Functions
+//!   - `iota`
 //! - Element-wise Unary Functions
 //!   - `copy`
 //!   - `sqrt`

@@ -11,6 +11,8 @@ and runtime-known length slice handling.
 
 ## Features
 
+- Nullary Function
+  - `iota`
 - Element-wise Unary Function (`f(comptime T: type, arg: anytype, out: []T) void`)
   - `copy`
   - `sqrt`
