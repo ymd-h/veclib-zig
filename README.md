@@ -25,7 +25,7 @@ and runtime-known length slice handling.
   - `sub`, `wrapSub`, `saturateSub`
   - `mul`, `wrapMul`, `saturateMul`,
   - `div`, `divFloor`, `divTrunc`, `rem`, `mod`
-  - `bitAdd`, `bitOr`, `bitXor`
+  - `bitAnd`, `bitOr`, `bitXor`
   - `min`, `max`
 - Element-wise Binary Comparison (`f(comptime T: type, arg1: anytype, arg2: anytype, out: [] bool) void`)
   - `eq`, `neq`, `gt`, `gte`, `lt`, `lte`,

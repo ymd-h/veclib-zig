@@ -17,7 +17,7 @@
 //!   - `sub`, `wrapSub`, `saturateSub`
 //!   - `mul`, `wrapMul`, `saturateMul`,
 //!   - `div`, `divFloor`, `divTrunc`, `rem`, `mod`
-//!   - `bitAdd`, `bitOr`, `bitXor`
+//!   - `bitAnd`, `bitOr`, `bitXor`
 //!   - `min`, `max`
 //!   - `eq`, `neq`, `gt`, `gte`, `lt`, `lte`,
 //! - Element-wise Ternary Functions
