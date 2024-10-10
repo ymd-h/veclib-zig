@@ -38,12 +38,16 @@ pub const VectorFunction2 = core.VectorFunction2;
 pub const VectorFunction3 = core.VectorFunction3;
 pub const VectorReductionFunction = core.VectorReductionFunction;
 
-pub const copy = math.copy;
+pub const nullary = math.nullary;
 pub const unary = math.unary;
 pub const binary = math.binary;
 pub const ternary = math.ternary;
 
+// Nullary Function
+pub const iota = math.iota;
+
 // Unary Function
+pub const copy = math.copy;
 pub const sqrt = math.sqrt;
 pub const sin = math.sin;
 pub const cos = math.cos;
