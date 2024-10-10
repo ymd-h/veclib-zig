@@ -1,4 +1,4 @@
-# veclib.zig: SIMD based Vector Calculation Library
+# veclib.zig: SIMD based Vector Computing Library
 
 
 > [!WARNING]
