@@ -14,6 +14,54 @@ const VectorReductionFunction = core.VectorReductionFunction;
 
 const isSIMD = core.isSIMDVector;
 
+pub const NullaryFunction = enum {
+    iota,
+};
+
+inline fn nullWithIndexFn(comptime T: type, comptime f: NullaryFunction, i: anytype) T {
+    return switch (f) {
+        .iota => i,
+    };
+}
+
+const NullaryOptions = struct {
+    type: type,
+    f: NullaryFunction,
+    simd_size: ?usize = null,
+};
+
+pub fn nullary(comptime options: NullaryOptions, out: anytype) void {
+    const T = options.type;
+    const size = options.simd_size orelse (std.simd.suggestVectorLength(T) orelse 0);
+
+    const V0 = VectorFunction0(T, size);
+    const F0 = struct {
+        inline fn call(i: anytype) V0.ReturnType(@TypeOf(i)) {
+            return nullWithIndexFn(V0.ReturnType(@TypeOf(i)), options.f, i);
+        }
+    };
+
+    V0.callWithIndex(F0.call, out);
+}
+
+pub fn iota(out: []usize) void {
+    nullary(.{ .type = usize, .f = .iota }, out);
+}
+
+test "iota" {
+    const N = 100;
+
+    var out = std.ArrayList(usize).init(testing.allocator);
+    defer out.deinit();
+    try out.resize(N);
+
+    iota(out.items);
+
+    for (out.items, 0..) |o, i| {
+        try testing.expectEqual(i, o);
+    }
+}
+
 /// Unary Function Definition
 pub const UnaryFunction = enum {
     copy,
@@ -42,6 +90,7 @@ pub const UnaryFunction = enum {
 
 inline fn uniFn(comptime T: type, comptime f: UnaryFunction, a: anytype) T {
     return switch (f) {
+        .copy => a,
         .sqrt => @sqrt(a),
         .sin => @sin(a),
         .cos => @cos(a),
@@ -135,6 +184,10 @@ test "unary function" {
     try Test.do(.{ .type = f32, .f = .ceil }, 2.7, 3.0);
     try Test.do(.{ .type = f32, .f = .trunc }, -2.7, -2.0);
     try Test.do(.{ .type = f32, .f = .round }, 2.7, 3.0);
+}
+
+pub fn copy(comptime T: type, arg: anytype, out: []T) void {
+    unary(.{ .type = T, .f = .copy }, arg, out);
 }
 
 pub fn sqrt(comptime T: type, arg: anytype, out: []T) void {
@@ -254,6 +307,7 @@ test "explicit unary" {
         }
     };
 
+    try Test.do(f32, copy, 3.2, 3.2);
     try Test.do(f32, sqrt, 4.0, 2.0);
     try Test.do(f32, sin, 1.7, @sin(1.7));
     try Test.do(f32, cos, 1.7, @cos(1.7));

@@ -112,9 +112,25 @@ pub fn VectorFunction0(comptime O: type, comptime vec_size: usize) type {
         const Self = @This();
         const VecO = @Vector(vec_size, O);
 
+        pub fn ReturnType(comptime T: type) type {
+            comptime {
+                if (isSIMDVector(T)) {
+                    return VecO;
+                } else {
+                    return O;
+                }
+            }
+        }
+
         inline fn forLoop(o: O, out: anytype) void {
             for (out) |*oi| {
                 oi.* = o;
+            }
+        }
+
+        inline fn forLoopWithIndex(comptime f: anytype, out: anytype) void {
+            for (out, 0..) |*oi, i| {
+                oi.* = f(i);
             }
         }
 
@@ -136,6 +152,25 @@ pub fn VectorFunction0(comptime O: type, comptime vec_size: usize) type {
             const ov: VecO = @splat(o);
             while (i < out.len) : (i += vec_size) {
                 out[i..][0..vec_size].* = ov;
+            }
+        }
+
+        pub fn callWithIndex(comptime f: anytype, out: anytype) void {
+            validateOut(O, @TypeOf(out));
+
+            if (vec_size < 2) {
+                return Self.forLoopWithIndex(f, out);
+            }
+
+            const rem = @mod(out.len, vec_size);
+            if (rem > 0) {
+                Self.forLoopWithIndex(f, out[0..rem]);
+            }
+
+            var i = rem;
+            const iota = std.simd.iota(usize, vec_size);
+            while (i < out.len) : (i += vec_size) {
+                out[i..][0..vec_size].* = f(iota + @as(@Vector(vec_size, usize), @splat(i)));
             }
         }
     };
