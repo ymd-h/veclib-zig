@@ -4,6 +4,7 @@
 //!
 //! ## Functions
 //! - Element-wise Unary Functions
+//!   - `copy`
 //!   - `sqrt`
 //!   - `sin`, `cos`, `tan`
 //!   - `exp`, `exp2`, `exp1m`

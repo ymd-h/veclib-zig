@@ -12,6 +12,7 @@ and runtime-known length slice handling.
 ## Features
 
 - Element-wise Unary Function (`f(comptime T: type, arg: anytype, out: []T) void`)
+  - `copy`
   - `sqrt`
   - `sin`, `cos`, `tan`
   - `exp`, `exp2`, `exp1m`
