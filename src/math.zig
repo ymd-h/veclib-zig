@@ -32,7 +32,7 @@ const NullaryOptions = struct {
 
 pub fn nullary(comptime options: NullaryOptions, out: anytype) void {
     const T = options.type;
-    const size = options.simd_size orelse (std.simd.suggestVectorLength(T) orelse 0);
+    const size = core.sizeForSIMD(T, options.simd_size);
 
     const V0 = VectorFunction0(T, size);
     const F0 = struct {
@@ -128,7 +128,7 @@ const UnaryOptions = struct {
 pub fn unary(comptime options: UnaryOptions, arg: anytype, out: anytype) void {
     const T = options.type;
     const O = options.type;
-    const size = options.simd_size orelse (std.simd.suggestVectorLength(T) orelse 0);
+    const size = core.sizeForSIMD(T, options.simd_size);
 
     const V1 = VectorFunction1(T, O, size);
 
@@ -416,7 +416,7 @@ pub fn binary(comptime options: BinaryOptions, arg1: anytype, arg2: anytype, out
         .eq, .neq, .gt, .gte, .lt, .lte => bool,
         else => T,
     };
-    const size = options.simd_size orelse (std.simd.suggestVectorLength(T) orelse 0);
+    const size = core.sizeForSIMD(T, options.simd_size);
     const V2 = VectorFunction2(T, T, O, size);
 
     const Binary = struct {
@@ -657,7 +657,7 @@ const TernaryOptions = struct {
 
 pub fn ternary(comptime options: TernaryOptions, arg1: anytype, arg2: anytype, arg3: anytype, out: anytype) void {
     const T = options.type;
-    const size = options.simd_size orelse (std.simd.suggestVectorLength(T) orelse 0);
+    const size = core.sizeForSIMD(T, options.simd_size);
 
     const V3 = VectorFunction3(T, T, T, T, size);
     const F3 = struct {
@@ -837,7 +837,7 @@ const ReductionOptions = struct {
 };
 
 pub fn reduce(comptime options: ReductionOptions, arg: []const options.type) options.type {
-    const size = options.simd_size orelse (std.simd.suggestVectorLength(options.type) orelse 0);
+    const size = core.sizeForSIMD(options.type, options.simd_size);
     const VR = VectorReductionFunction(options.type, size);
 
     const FR = struct {

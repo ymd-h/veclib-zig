@@ -5,6 +5,12 @@ const testing = std.testing;
 
 const compat = @import("./compat.zig");
 
+pub inline fn sizeForSIMD(comptime T: type, comptime size: ?usize) usize {
+    comptime {
+        return size orelse (std.simd.suggestVectorLength(T) orelse 0);
+    }
+}
+
 const ScalarOrVector = enum {
     scalar,
     vector,
@@ -193,7 +199,7 @@ test "Vector Function 0" {
     defer true_out.deinit();
     try true_out.appendNTimes(3.2, N);
 
-    const vec_size = std.simd.suggestVectorLength(f16) orelse 0;
+    const vec_size = sizeForSIMD(f16, null);
     std.debug.print("Vector Size for f16: {}\n", .{vec_size});
 
     // With SIMD
