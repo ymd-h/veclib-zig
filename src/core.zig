@@ -47,8 +47,7 @@ const ScalarOrVector = enum {
                         else => {},
                     }
 
-                    @compileLog("Compile Error: `value` must be Scalar (aka. T, comptime_int, or comptime_float) or Vector (aka. []T, []const T), but {T, @TypeOf(value)} = ", T, V);
-                    unreachable;
+                    @compileError("Compile Error: `value` must be Scalar (aka. T, comptime_int, or comptime_float) or Vector (aka. []T, []const T), but T = " ++ @typeName(T) ++ ", @TypeOf(value) = " ++ @typeName(V));
                 },
             };
         }
