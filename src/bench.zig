@@ -257,13 +257,13 @@ fn MatMul(comptime T: type, comptime row: usize, comptime column: usize) type {
             veclib.mul(usize, &cid, column, &cid);
 
             var col: [n]T = undefined;
+            var c: [n]usize = undefined;
 
             var i: usize = 0;
             while (i < row) : (i += n) {
                 var ov: V = @splat(0);
 
                 for (v, 0..) |vj, j| {
-                    var c: [n]usize = undefined;
                     veclib.add(usize, cid[i .. i + n], j, &c);
                     veclib.gather(.{ .type = T }, m, &c, &col);
                     ov = @mulAdd(V, @as(V, col), @as(V, @splat(vj)), ov);
