@@ -254,7 +254,7 @@ fn MatMul(comptime T: type, comptime row: usize, comptime column: usize) type {
 
             var cid: [row]usize = undefined;
             veclib.iota(&cid);
-            // veclib.mul(usize, &cid, column, &cid);
+            veclib.mul(usize, &cid, column, &cid);
 
             var col: [n]T = undefined;
 
