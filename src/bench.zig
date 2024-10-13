@@ -217,7 +217,7 @@ fn Dot(comptime T: type) type {
     };
 }
 
-fn MatMul(comptime T: type, comptime _: usize, comptime column: usize) type {
+fn MatMul(comptime T: type, comptime row: usize, comptime column: usize) type {
     return struct {
         fn for_loop(m: []const T, v: []const T, out: []T) void {
             for (out, 0..) |*o, i| {
@@ -245,6 +245,31 @@ fn MatMul(comptime T: type, comptime _: usize, comptime column: usize) type {
                 while (j < column) : (j += n) {
                     o.* += @reduce(.Add, @as(V, r[j..][0..n].*) * @as(V, v[j..][0..n].*));
                 }
+            }
+        }
+
+        fn vec_in_column_loop(m: []const T, v: []const T, out: []T) void {
+            const n = std.simd.suggestVectorLength(T).?;
+            const V = @Vector(n, T);
+
+            var cid: [row]usize = undefined;
+            veclib.iota(&cid);
+            // veclib.mul(usize, &cid, column, &cid);
+
+            var col: [n]T = undefined;
+
+            var i: usize = 0;
+            while (i < row) : (i += n) {
+                var ov: V = @splat(0);
+
+                for (v, 0..) |vj, j| {
+                    var c: [n]usize = undefined;
+                    veclib.add(usize, cid[i .. i + n], j, &c);
+                    veclib.gather(.{ .type = T }, m, &c, &col);
+                    ov = @mulAdd(V, @as(V, col), @as(V, @splat(vj)), ov);
+                }
+
+                out[i..][0..n].* = ov;
             }
         }
     };
@@ -279,6 +304,7 @@ pub fn main() !void {
     const C = 8 * 1_000;
     try run_benchMV(f32, allocator, stdout, "MatMul: for-loop  ", MatMul(f32, R, C).for_loop, R, C);
     try run_benchMV(f32, allocator, stdout, "MatMul: vec in row", MatMul(f32, R, C).vec_in_row_loop, R, C);
+    try run_benchMV(f32, allocator, stdout, "MatMul: vec in col", MatMul(f32, R, C).vec_in_column_loop, R, C);
 
     try bw.flush();
 }
