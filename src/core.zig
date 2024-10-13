@@ -100,8 +100,7 @@ fn validateOut(comptime O: type, comptime OType: type) void {
     const sv = ScalarOrVector.which(O, OType);
 
     if (sv == .scalar) {
-        @compileLog("`out` must be Vector but Scalar: {O, OType} = ", O, OType);
-        unreachable;
+        @compileError("`out` must be Vector but Scalar: O = " ++ @typeName(O) ++ ", OType = " ++ @typeName(OType));
     }
 }
 
