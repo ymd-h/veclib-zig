@@ -41,12 +41,12 @@ pub fn nullary(comptime options: NullaryOptions, out: anytype) void {
 
     const V0 = VectorFunction0(T, size);
     const F0 = struct {
-        pub inline fn call(_: anytype, i: anytype) V0.ReturnType(@TypeOf(i)) {
+        pub inline fn call(i: anytype) V0.ReturnType(@TypeOf(i)) {
             return nullWithIndexFn(V0.ReturnType(@TypeOf(i)), options.f, i);
         }
     };
 
-    V0.callWithIndex(F0{}, out);
+    V0.callWithIndex(F0, out);
 }
 
 pub fn iota(out: []usize) void {
@@ -138,13 +138,13 @@ pub fn unary(comptime options: UnaryOptions, arg: anytype, out: anytype) void {
     const V1 = VectorFunction1(T, O, size);
 
     const Unary = struct {
-        pub inline fn call(_: anytype, a: anytype) V1.ReturnType(@TypeOf(a)) {
+        pub inline fn call(a: anytype) V1.ReturnType(@TypeOf(a)) {
             const OType = V1.ReturnType(@TypeOf(a));
             return uniFn(OType, options.f, a);
         }
     };
 
-    V1.call(Unary{}, arg, out);
+    V1.call(Unary, arg, out);
 }
 
 test "unary function" {
@@ -425,13 +425,13 @@ pub fn binary(comptime options: BinaryOptions, arg1: anytype, arg2: anytype, out
     const V2 = VectorFunction2(T, T, O, size);
 
     const Binary = struct {
-        pub inline fn call(_: anytype, a1: anytype, a2: anytype) V2.ReturnType(@TypeOf(a1, a2)) {
+        pub inline fn call(a1: anytype, a2: anytype) V2.ReturnType(@TypeOf(a1, a2)) {
             const OType = V2.ReturnType(@TypeOf(a1));
             return biFn(OType, options.f, a1, a2);
         }
     };
 
-    V2.call(Binary{}, arg1, arg2, out);
+    V2.call(Binary, arg1, arg2, out);
 }
 
 test "binary" {
@@ -697,12 +697,12 @@ pub fn ternary(comptime options: TernaryOptions, arg1: anytype, arg2: anytype, a
 
     const V3 = VectorFunction3(T, T, T, T, size);
     const F3 = struct {
-        pub inline fn call(_: anytype, a1: anytype, a2: anytype, a3: anytype) V3.ReturnType(@TypeOf(a1)) {
+        pub inline fn call(a1: anytype, a2: anytype, a3: anytype) V3.ReturnType(@TypeOf(a1)) {
             return triFn(V3.ReturnType(@TypeOf(a1)), options.f, a1, a2, a3);
         }
     };
 
-    V3.call(F3{}, arg1, arg2, arg3, out);
+    V3.call(F3, arg1, arg2, arg3, out);
 }
 
 test "ternary" {
@@ -877,12 +877,12 @@ pub fn reduce(comptime options: ReductionOptions, arg: []const options.type) opt
     const VR = VectorReductionFunction(options.type, size);
 
     const FR = struct {
-        pub inline fn call(_: anytype, a: anytype, b: @TypeOf(a)) @TypeOf(a) {
+        pub inline fn call(a: anytype, b: @TypeOf(a)) @TypeOf(a) {
             return redFn(options.f, a, b);
         }
     };
 
-    return VR.call(FR{}, arg);
+    return VR.call(FR, arg);
 }
 
 test "Reduce" {

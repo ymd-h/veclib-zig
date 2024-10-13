@@ -188,7 +188,7 @@ test "Vector Function 0" {
     try out.resize(N);
 
     const Fill = struct {
-        inline fn call(_: anytype) f16 {
+        inline fn call() f16 {
             return 3.2;
         }
     };
@@ -201,14 +201,14 @@ test "Vector Function 0" {
     std.debug.print("Vector Size for f16: {}\n", .{vec_size});
 
     // With SIMD
-    VectorFunction0(f16, vec_size).call(Fill{}, out.items);
+    VectorFunction0(f16, vec_size).call(Fill, out.items);
     try testing.expectEqualSlices(f16, true_out.items, out.items);
 
     out.clearRetainingCapacity();
     try out.resize(N);
 
     // Without SIMD
-    VectorFunction0(f16, 0).call(Fill{}, out.items);
+    VectorFunction0(f16, 0).call(Fill, out.items);
     try testing.expectEqualSlices(f16, true_out.items, out.items);
 }
 
@@ -278,7 +278,7 @@ test "Vector Function 1" {
     const TestV1 = struct {
         fn do_test(comptime V1: type) !void {
             const TwoTimes = struct {
-                inline fn call(_: anytype, v: anytype) V1.ReturnType(@TypeOf(v)) {
+                inline fn call(v: anytype) V1.ReturnType(@TypeOf(v)) {
                     return v + v;
                 }
             };
@@ -299,7 +299,7 @@ test "Vector Function 1" {
             try out.resize(N);
 
             // Vector
-            V1.call(TwoTimes{}, a.items, out.items);
+            V1.call(TwoTimes, a.items, out.items);
             try testing.expectEqualSlices(u32, true_out.items, out.items);
 
             out.clearRetainingCapacity();
@@ -309,7 +309,7 @@ test "Vector Function 1" {
             try true_out.appendNTimes(6, N);
 
             // Scalar
-            V1.call(TwoTimes{}, 3, out.items);
+            V1.call(TwoTimes, 3, out.items);
             try testing.expectEqualSlices(u32, true_out.items, out.items);
         }
     };
@@ -430,24 +430,24 @@ test "Vector Function 2" {
             try out.resize(N);
 
             const Multiply = struct {
-                fn call(_: anytype, a1: anytype, a2: anytype) V2.ReturnType(@TypeOf(a1, a2)) {
+                fn call(a1: anytype, a2: anytype) V2.ReturnType(@TypeOf(a1, a2)) {
                     return a1 * a2;
                 }
             };
 
             // Vector-Vector
-            V2.call(Multiply{}, a.items, b.items, out.items);
+            V2.call(Multiply, a.items, b.items, out.items);
             try testing.expectEqualSlices(f32, true_out.items, out.items);
 
             out.clearRetainingCapacity();
             try out.resize(N);
 
             // Vector-Scalar
-            V2.call(Multiply{}, a.items, 0.5, out.items);
+            V2.call(Multiply, a.items, 0.5, out.items);
             try testing.expectEqualSlices(f32, true_out.items, out.items);
 
             // Scalar-Vector
-            V2.call(Multiply{}, 3.0, b.items, out.items);
+            V2.call(Multiply, 3.0, b.items, out.items);
             try testing.expectEqualSlices(f32, true_out.items, out.items);
         }
     };
@@ -590,12 +590,12 @@ test "Vector Function 3" {
             const V3 = VectorFunction3(T, T, T, T, vec_size);
 
             const F = struct {
-                inline fn call(_: anytype, arg1: anytype, arg2: anytype, arg3: anytype) V3.ReturnType(@TypeOf(arg1)) {
+                inline fn call(arg1: anytype, arg2: anytype, arg3: anytype) V3.ReturnType(@TypeOf(arg1)) {
                     return @mulAdd(V3.ReturnType(@TypeOf(arg1)), arg1, arg2, arg3);
                 }
             };
 
-            V3.call(F{}, a1.items, a2.items, a3.items, out.items);
+            V3.call(F, a1.items, a2.items, a3.items, out.items);
             for (true_out.items, out.items) |ti, oi| {
                 try testing.expectApproxEqRel(ti, oi, 1e-6);
             }
@@ -671,18 +671,18 @@ test "Vector Reduction" {
     };
 
     const Add = struct {
-        fn call(_: anytype, a: anytype, b: anytype) @TypeOf(a, b) {
+        fn call(a: anytype, b: anytype) @TypeOf(a, b) {
             return a + b;
         }
     };
 
     const Prod = struct {
-        fn call(_: anytype, a: anytype, b: anytype) @TypeOf(a, b) {
+        fn call(a: anytype, b: anytype) @TypeOf(a, b) {
             return a * b;
         }
     };
 
-    try Test.do(u32, null, Add{}, 2, 200);
-    try Test.do(u32, 0, Add{}, 2, 200);
-    try Test.do(u128, null, Prod{}, 2, 1 << 100);
+    try Test.do(u32, null, Add, 2, 200);
+    try Test.do(u32, 0, Add, 2, 200);
+    try Test.do(u128, null, Prod, 2, 1 << 100);
 }
