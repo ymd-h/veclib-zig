@@ -34,7 +34,7 @@
 
 const core = @import("./core.zig");
 const math = @import("./math.zig");
-const matrix = @import("./matrix.zig");
+pub const matrix = @import("./matrix.zig");
 
 pub const VectorFunction0 = core.VectorFunction0;
 pub const VectorFunction1 = core.VectorFunction1;
