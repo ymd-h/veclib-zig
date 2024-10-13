@@ -56,6 +56,43 @@ fn run_benchR(comptime T: type, allocator: std.mem.Allocator, writer: anytype, c
     return r;
 }
 
+fn run_benchDot(comptime T: type, allocator: std.mem.Allocator, writer: anytype, comptime name: []const u8, f: anytype, N: usize) !T {
+    var a = std.ArrayList(T).init(allocator);
+    defer a.deinit();
+    try a.appendNTimes(0.5, N);
+
+    var b = std.ArrayList(T).init(allocator);
+    defer b.deinit();
+    try b.appendNTimes(2.0, N);
+
+    const F = struct {
+        inline fn call(a1: anytype, a2: anytype, ret: *T) void {
+            ret.* = f(a1, a2);
+        }
+    };
+
+    var r: T = undefined;
+    try bench(writer, name, F.call, .{ a.items, b.items, &r });
+
+    return r;
+}
+
+fn run_benchMV(comptime T: type, allocator: std.mem.Allocator, writer: anytype, comptime name: []const u8, f: anytype, row: usize, column: usize) !void {
+    var m = std.ArrayList(T).init(allocator);
+    defer m.deinit();
+    try m.appendNTimes(3.2, row * column);
+
+    var v = std.ArrayList(T).init(allocator);
+    defer v.deinit();
+    try v.appendNTimes(2.8, column);
+
+    var o = std.ArrayList(T).init(allocator);
+    defer o.deinit();
+    try o.resize(row);
+
+    try bench(writer, name, f, .{ m.items, v.items, o.items });
+}
+
 fn Add(comptime T: type) type {
     return struct {
         fn for_loop(a: std.ArrayList(T), b: std.ArrayList(T), c: *std.ArrayList(T)) void {
@@ -112,6 +149,107 @@ fn Sum(comptime T: type) type {
     };
 }
 
+fn Dot(comptime T: type) type {
+    return struct {
+        fn for_loop(a: []const T, b: []const T) T {
+            var r: T = 0;
+            for (a, b) |ai, bi| {
+                r += ai * bi;
+            }
+            return r;
+        }
+
+        fn vec_loop(a: []const T, b: []const T) T {
+            const n = std.simd.suggestVectorLength(T).?;
+            const V = @Vector(n, T);
+
+            var av: V = a[0..n].*;
+            var bv: V = b[0..n].*;
+            var rv = av * bv;
+
+            var i: usize = n;
+            while (i < a.len) : (i += n) {
+                av = a[i..][0..n].*;
+                bv = b[i..][0..n].*;
+                rv += av * bv;
+            }
+            std.debug.assert(i == a.len);
+
+            return @reduce(.Add, rv);
+        }
+
+        fn vec_red_loop(a: []const T, b: []const T) T {
+            const n = std.simd.suggestVectorLength(T).?;
+            const V = @Vector(n, T);
+
+            var av: V = a[0..n].*;
+            var bv: V = b[0..n].*;
+            var rv = @reduce(.Add, av * bv);
+
+            var i: usize = n;
+            while (i < a.len) : (i += n) {
+                av = a[i..][0..n].*;
+                bv = b[i..][0..n].*;
+                rv += @reduce(.Add, av * bv);
+            }
+
+            return rv;
+        }
+
+        fn vec_fma_loop(a: []const T, b: []const T) T {
+            const n = std.simd.suggestVectorLength(T).?;
+            const V = @Vector(n, T);
+
+            var av: V = a[0..n].*;
+            var bv: V = b[0..n].*;
+            var rv = av * bv;
+
+            var i: usize = n;
+            while (i < a.len) : (i += n) {
+                av = a[i..][0..n].*;
+                bv = b[i..][0..n].*;
+                rv = @mulAdd(V, av, bv, rv);
+            }
+            std.debug.assert(i == a.len);
+
+            return @reduce(.Add, rv);
+        }
+    };
+}
+
+fn MatMul(comptime T: type, comptime _: usize, comptime column: usize) type {
+    return struct {
+        fn for_loop(m: []const T, v: []const T, out: []T) void {
+            for (out, 0..) |*o, i| {
+                const rid = i * column;
+                const r = m[rid .. rid + column];
+
+                o.* = r[0] * v[0];
+                for (r[1..], v[1..]) |ri, vi| {
+                    o.* += ri * vi;
+                }
+            }
+        }
+
+        fn vec_in_row_loop(m: []const T, v: []const T, out: []T) void {
+            const n = std.simd.suggestVectorLength(T).?;
+            const V = @Vector(n, T);
+
+            for (out, 0..) |*o, i| {
+                const rid = i * column;
+                const r = m[rid .. rid + column];
+
+                o.* = @reduce(.Add, @as(V, r[0..n].*) * @as(V, v[0..n].*));
+
+                var j: usize = n;
+                while (j < column) : (j += n) {
+                    o.* += @reduce(.Add, @as(V, r[j..][0..n].*) * @as(V, v[j..][0..n].*));
+                }
+            }
+        }
+    };
+}
+
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
@@ -131,6 +269,16 @@ pub fn main() !void {
     const r3 = try run_benchR(u32, allocator, stdout, "Sum u32: veclib            ", Sum(u32).veclib_loop, 8 * N1);
     std.debug.assert(r1 == r2);
     std.debug.assert(r2 == r3);
+
+    _ = try run_benchDot(f32, allocator, stdout, "dot f32: for-loop", Dot(f32).for_loop, 8 * N1 * 10);
+    _ = try run_benchDot(f32, allocator, stdout, "dot f32: vec     ", Dot(f32).vec_loop, 8 * N1 * 10);
+    _ = try run_benchDot(f32, allocator, stdout, "dot f32: vec-red ", Dot(f32).vec_red_loop, 8 * N1 * 10);
+    _ = try run_benchDot(f32, allocator, stdout, "dot f32: vec-fma ", Dot(f32).vec_fma_loop, 8 * N1 * 10);
+
+    const R = 8 * 1_000;
+    const C = 8 * 1_000;
+    try run_benchMV(f32, allocator, stdout, "MatMul: for-loop  ", MatMul(f32, R, C).for_loop, R, C);
+    try run_benchMV(f32, allocator, stdout, "MatMul: vec in row", MatMul(f32, R, C).vec_in_row_loop, R, C);
 
     try bw.flush();
 }
