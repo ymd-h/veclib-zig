@@ -4,6 +4,7 @@ const std = @import("std");
 const testing = std.testing;
 
 const core = @import("./core.zig");
+const math = @import("./math.zig");
 
 const Options = struct {
     type: type,
@@ -70,22 +71,26 @@ test "dot" {
     try Test.do(.{ .type = f32, .simd_size = 0 }, 1.5, 2.0);
 }
 
-pub fn Matrix(comptime T: type) type {
+pub fn Matrix(comptime T: type, comptime is_const: bool) type {
     return struct {
         row: usize,
         column: usize,
-        data: []T,
+        data: if (is_const) []const T else []T,
 
         const Self = @This();
 
-        pub fn getRow(self: Self, r: usize) []T {
+        pub fn getRow(self: Self, r: usize) @TypeOf(self.data) {
             const ridx = r * self.column;
             return self.data[ridx .. ridx + self.column];
+        }
+
+        pub fn at(self: Self, r: usize, c: usize) T {
+            return self.data[r * self.column + c];
         }
     };
 }
 
-pub fn mulMV(comptime options: Options, m: Matrix(options.type), v: []const options.type, out: []options.type) void {
+pub fn mulMV(comptime options: Options, m: Matrix(options.type, true), v: []const options.type, out: []options.type) void {
     for (out, 0..) |*o, i| {
         o.* = dot(options, m.getRow(i), v);
     }
@@ -117,4 +122,38 @@ test "matmul MV" {
     try Test.do(.{ .type = f32 }, 3, 4);
     try Test.do(.{ .type = f32 }, 325, 431);
     try Test.do(.{ .type = f32, .simd_size = 0 }, 325, 431);
+}
+
+pub fn mulMM(comptime options: Options, m1: Matrix(options.type, true), m2: Matrix(options.type, true), out: Matrix(options.type, false)) void {
+    const T = options.type;
+    const size = core.sizeForSIMD(T, options.simd_size);
+
+    const fmaOp = .{ .type = T, .f = .mulAdd, .simd_size = size };
+
+    var r1: usize = 0;
+    while (r1 < m1.row) : (r1 += 1) {
+        const o = out.getRow(r1);
+
+        var r2: usize = 0;
+        while (r2 < m2.row) : (r2 += 1) {
+            math.ternary(fmaOp, m1.at(r1, r2), m2.getRow(r2), o, o);
+        }
+    }
+}
+
+test "mul MM" {
+    const m1: []const f32 = &.{ 3.2, 2.1, 1.2, 1.5 };
+    const m2: []const f32 = &.{ 0.3, 1.2, 1.1, 1.4 };
+    const o: []const f32 = &.{
+        3.2 * 0.3 + 2.1 * 1.1, 3.2 * 1.2 + 2.1 * 1.4,
+        1.2 * 0.3 + 1.5 * 1.1, 1.2 * 1.2 + 1.5 * 1.4,
+    };
+
+    var r: [4]f32 = undefined;
+
+    mulMM(.{ .type = f32 }, .{ .row = 2, .column = 2, .data = m1 }, .{ .row = 2, .column = 2, .data = m2 }, .{ .row = 2, .column = 2, .data = &r });
+
+    for (r, o) |ri, oi| {
+        try testing.expectApproxEqRel(ri, oi, 1e-6);
+    }
 }
