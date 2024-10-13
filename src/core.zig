@@ -92,8 +92,7 @@ pub inline fn ElementType(comptime T: type) type {
             else => {},
         }
 
-        @compileLog("T is not array-like: ", T, @typeInfo(T));
-        unreachable;
+        @compileError("T (" ++ @typeName(T) ++ ") is not array-like");
     }
 }
 
