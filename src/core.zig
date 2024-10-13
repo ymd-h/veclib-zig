@@ -134,15 +134,15 @@ pub fn VectorFunction0(comptime O: type, comptime vec_size: usize) type {
 
         inline fn forLoopWithIndex(comptime f: anytype, out: anytype) void {
             for (out, 0..) |*oi, i| {
-                oi.* = f(i);
+                oi.* = f.call(i);
             }
         }
 
         /// Call Vector Function
-        pub fn call(comptime f: anytype, out: anytype) void {
+        pub fn call(f: anytype, out: anytype) void {
             validateOut(O, @TypeOf(out));
 
-            const o = f();
+            const o = f.call();
             if (vec_size < 2) {
                 return Self.forLoop(o, out);
             }
@@ -159,7 +159,7 @@ pub fn VectorFunction0(comptime O: type, comptime vec_size: usize) type {
             }
         }
 
-        pub fn callWithIndex(comptime f: anytype, out: anytype) void {
+        pub fn callWithIndex(f: anytype, out: anytype) void {
             validateOut(O, @TypeOf(out));
 
             if (vec_size < 2) {
@@ -174,7 +174,7 @@ pub fn VectorFunction0(comptime O: type, comptime vec_size: usize) type {
             var i = rem;
             const iota = std.simd.iota(usize, vec_size);
             while (i < out.len) : (i += vec_size) {
-                out[i..][0..vec_size].* = f(iota + @as(@Vector(vec_size, usize), @splat(i)));
+                out[i..][0..vec_size].* = f.call(iota + @as(@Vector(vec_size, usize), @splat(i)));
             }
         }
     };
@@ -188,7 +188,7 @@ test "Vector Function 0" {
     try out.resize(N);
 
     const Fill = struct {
-        inline fn call() f16 {
+        inline fn call(_: anytype) f16 {
             return 3.2;
         }
     };
@@ -201,14 +201,14 @@ test "Vector Function 0" {
     std.debug.print("Vector Size for f16: {}\n", .{vec_size});
 
     // With SIMD
-    VectorFunction0(f16, vec_size).call(Fill.call, out.items);
+    VectorFunction0(f16, vec_size).call(Fill{}, out.items);
     try testing.expectEqualSlices(f16, true_out.items, out.items);
 
     out.clearRetainingCapacity();
     try out.resize(N);
 
     // Without SIMD
-    VectorFunction0(f16, 0).call(Fill.call, out.items);
+    VectorFunction0(f16, 0).call(Fill{}, out.items);
     try testing.expectEqualSlices(f16, true_out.items, out.items);
 }
 
@@ -225,24 +225,28 @@ pub fn VectorFunction1(comptime T1: type, comptime O: type, comptime vec_size: u
             }
         }
 
-        inline fn forLoop(comptime f: anytype, arg1: []const T1, out: anytype) void {
+        inline fn forLoop(f: anytype, arg1: []const T1, out: anytype) void {
             for (arg1, out) |a1_i, *oi| {
-                oi.* = f(a1_i);
+                oi.* = f.call(a1_i);
             }
         }
 
         /// Call Vector Function
-        pub fn call(comptime f: anytype, arg1: anytype, out: anytype) void {
+        pub fn call(f: anytype, arg1: anytype, out: anytype) void {
             validateOut(O, @TypeOf(out));
 
             switch (ScalarOrVector.which(T1, @TypeOf(arg1))) {
                 .scalar => {
                     const F0 = struct {
-                        inline fn f0() O {
-                            return f(arg1);
+                        a1: T1,
+
+                        const Self1 = @This();
+
+                        inline fn call(self: Self1) O {
+                            return f.call(self.a1);
                         }
                     };
-                    VectorFunction0(O, vec_size).call(F0.f0, out);
+                    VectorFunction0(O, vec_size).call(F0{ .a1 = arg1 }, out);
                 },
                 .vector => {
                     if (vec_size < 2) {
@@ -257,7 +261,7 @@ pub fn VectorFunction1(comptime T1: type, comptime O: type, comptime vec_size: u
                     var i = rem;
                     while (i < out.len) : (i += vec_size) {
                         const a1_v: Vec1 = arg1[i..][0..vec_size].*;
-                        out[i..][0..vec_size].* = f(a1_v);
+                        out[i..][0..vec_size].* = f.call(a1_v);
                     }
                 },
             }
@@ -274,7 +278,7 @@ test "Vector Function 1" {
     const TestV1 = struct {
         fn do_test(comptime V1: type) !void {
             const TwoTimes = struct {
-                inline fn call(v: anytype) V1.ReturnType(@TypeOf(v)) {
+                inline fn call(_: anytype, v: anytype) V1.ReturnType(@TypeOf(v)) {
                     return v + v;
                 }
             };
@@ -295,7 +299,7 @@ test "Vector Function 1" {
             try out.resize(N);
 
             // Vector
-            V1.call(TwoTimes.call, a.items, out.items);
+            V1.call(TwoTimes{}, a.items, out.items);
             try testing.expectEqualSlices(u32, true_out.items, out.items);
 
             out.clearRetainingCapacity();
@@ -305,7 +309,7 @@ test "Vector Function 1" {
             try true_out.appendNTimes(6, N);
 
             // Scalar
-            V1.call(TwoTimes.call, 3, out.items);
+            V1.call(TwoTimes{}, 3, out.items);
             try testing.expectEqualSlices(u32, true_out.items, out.items);
         }
     };
@@ -331,48 +335,56 @@ pub fn VectorFunction2(comptime T1: type, comptime T2: type, comptime O: type, c
             }
         }
 
-        inline fn forLoop(comptime f: anytype, arg1: []const T1, arg2: []const T2, out: anytype) void {
+        inline fn forLoop(f: anytype, arg1: []const T1, arg2: []const T2, out: anytype) void {
             for (arg1, arg2, out) |a1_i, a2_i, *oi| {
-                oi.* = f(a1_i, a2_i);
+                oi.* = f.call(a1_i, a2_i);
             }
         }
 
         /// Call Vector Function
-        pub fn call(comptime f: anytype, arg1: anytype, arg2: anytype, out: anytype) void {
+        pub fn call(f: anytype, arg1: anytype, arg2: anytype, out: anytype) void {
             validateOut(O, @TypeOf(out));
 
             if (ScalarOrVector.which(T1, @TypeOf(arg1)) == .scalar) {
                 const V1 = VectorFunction1(T2, O, vec_size);
 
                 const F1 = struct {
-                    inline fn call(v: anytype) V1.ReturnType(@TypeOf(v)) {
+                    a1: T1,
+
+                    const Self1 = @This();
+
+                    inline fn call(self: Self1, v: anytype) V1.ReturnType(@TypeOf(v)) {
                         const isSIMD = isSIMDVector(@TypeOf(v));
                         if (isSIMD) {
-                            return f(@as(Vec1, @splat(arg1)), v);
+                            return f.call(@as(Vec1, @splat(self.a1)), v);
                         } else {
-                            return f(arg1, v);
+                            return f.call(self.a1, v);
                         }
                     }
                 };
 
-                return V1.call(F1.call, arg2, out);
+                return V1.call(F1{ .a1 = arg1 }, arg2, out);
             }
 
             if (ScalarOrVector.which(T2, @TypeOf(arg2)) == .scalar) {
                 const V1 = VectorFunction1(T1, O, vec_size);
 
                 const F1 = struct {
-                    inline fn call(v: anytype) V1.ReturnType(@TypeOf(v)) {
+                    a2: T2,
+
+                    const Self2 = @This();
+
+                    inline fn call(self: Self2, v: anytype) V1.ReturnType(@TypeOf(v)) {
                         const isSIMD = isSIMDVector(@TypeOf(v));
                         if (isSIMD) {
-                            return f(v, @as(Vec2, @splat(arg2)));
+                            return f.call(v, @as(Vec2, @splat(self.a2)));
                         } else {
-                            return f(v, arg2);
+                            return f.call(v, self.a2);
                         }
                     }
                 };
 
-                return V1.call(F1.call, arg1, out);
+                return V1.call(F1{ .a2 = arg2 }, arg1, out);
             }
 
             if (vec_size < 2) {
@@ -388,7 +400,7 @@ pub fn VectorFunction2(comptime T1: type, comptime T2: type, comptime O: type, c
             while (i < out.len) : (i += vec_size) {
                 const a1_v: Vec1 = arg1[i..][0..vec_size].*;
                 const a2_v: Vec2 = arg2[i..][0..vec_size].*;
-                out[i..][0..vec_size].* = f(a1_v, a2_v);
+                out[i..][0..vec_size].* = f.call(a1_v, a2_v);
             }
         }
     };
@@ -418,24 +430,24 @@ test "Vector Function 2" {
             try out.resize(N);
 
             const Multiply = struct {
-                fn call(a1: anytype, a2: anytype) V2.ReturnType(@TypeOf(a1, a2)) {
+                fn call(_: anytype, a1: anytype, a2: anytype) V2.ReturnType(@TypeOf(a1, a2)) {
                     return a1 * a2;
                 }
             };
 
             // Vector-Vector
-            V2.call(Multiply.call, a.items, b.items, out.items);
+            V2.call(Multiply{}, a.items, b.items, out.items);
             try testing.expectEqualSlices(f32, true_out.items, out.items);
 
             out.clearRetainingCapacity();
             try out.resize(N);
 
             // Vector-Scalar
-            V2.call(Multiply.call, a.items, 0.5, out.items);
+            V2.call(Multiply{}, a.items, 0.5, out.items);
             try testing.expectEqualSlices(f32, true_out.items, out.items);
 
             // Scalar-Vector
-            V2.call(Multiply.call, 3.0, b.items, out.items);
+            V2.call(Multiply{}, 3.0, b.items, out.items);
             try testing.expectEqualSlices(f32, true_out.items, out.items);
         }
     };
@@ -461,61 +473,73 @@ pub fn VectorFunction3(comptime T1: type, comptime T2: type, comptime T3: type, 
             }
         }
 
-        inline fn forLoop(comptime f: anytype, arg1: anytype, arg2: anytype, arg3: anytype, out: anytype) void {
+        inline fn forLoop(f: anytype, arg1: anytype, arg2: anytype, arg3: anytype, out: anytype) void {
             for (arg1, arg2, arg3, out) |a1, a2, a3, *o| {
-                o.* = f(a1, a2, a3);
+                o.* = f.call(a1, a2, a3);
             }
         }
 
-        pub fn call(comptime f: anytype, arg1: anytype, arg2: anytype, arg3: anytype, out: anytype) void {
+        pub fn call(f: anytype, arg1: anytype, arg2: anytype, arg3: anytype, out: anytype) void {
             validateOut(O, @TypeOf(out));
 
             if (ScalarOrVector.which(T1, @TypeOf(arg1)) == .scalar) {
                 const V2 = VectorFunction2(T2, T3, O, vec_size);
 
                 const F2 = struct {
-                    inline fn call(a2: anytype, a3: anytype) V2.ReturnType(@TypeOf(a2)) {
+                    a1: T1,
+
+                    const Self1 = @This();
+
+                    inline fn call(self: Self1, a2: anytype, a3: anytype) V2.ReturnType(@TypeOf(a2)) {
                         if (isSIMDVector(@TypeOf(a2))) {
-                            return f(@as(Vec1, @splat(arg1)), a2, a3);
+                            return f.call(@as(Vec1, @splat(self.a1)), a2, a3);
                         } else {
-                            return f(arg1, a2, a3);
+                            return f.call(self.a1, a2, a3);
                         }
                     }
                 };
 
-                return V2.call(F2.call, arg2, arg3, out);
+                return V2.call(F2{ .a1 = arg1 }, arg2, arg3, out);
             }
 
             if (ScalarOrVector.which(T2, @TypeOf(arg2)) == .scalar) {
                 const V2 = VectorFunction2(T1, T3, O, vec_size);
 
                 const F2 = struct {
-                    inline fn call(a1: anytype, a3: anytype) V2.ReturnType(@TypeOf(a1)) {
+                    a2: T2,
+
+                    const Self2 = @This();
+
+                    inline fn call(self: Self2, a1: anytype, a3: anytype) V2.ReturnType(@TypeOf(a1)) {
                         if (isSIMDVector(@TypeOf(a1))) {
-                            return f(a1, @as(Vec2, @splat(arg2)), a3);
+                            return f.call(a1, @as(Vec2, @splat(self.a2)), a3);
                         } else {
-                            return f(a1, arg2, a3);
+                            return f.call(a1, self.a2, a3);
                         }
                     }
                 };
 
-                return V2.call(F2.call, arg1, arg3, out);
+                return V2.call(F2{ .a2 = arg2 }, arg1, arg3, out);
             }
 
             if (ScalarOrVector.which(T3, @TypeOf(arg3)) == .scalar) {
                 const V2 = VectorFunction2(T1, T2, O, vec_size);
 
                 const F2 = struct {
-                    inline fn call(a1: anytype, a2: anytype) V2.ReturnType(@TypeOf(a1)) {
+                    a3: T3,
+
+                    const Self3 = @This();
+
+                    inline fn call(self: Self3, a1: anytype, a2: anytype) V2.ReturnType(@TypeOf(a1)) {
                         if (isSIMDVector(@TypeOf(a1))) {
-                            return f(a1, a2, @as(Vec3, @splat(arg3)));
+                            return f.call(a1, a2, @as(Vec3, @splat(self.a3)));
                         } else {
-                            return f(a1, a2, arg3);
+                            return f.call(a1, a2, self.a3);
                         }
                     }
                 };
 
-                return V2.call(F2.call, arg1, arg2, out);
+                return V2.call(F2{ .a3 = arg3 }, arg1, arg2, out);
             }
 
             if (vec_size < 2) {
@@ -532,7 +556,7 @@ pub fn VectorFunction3(comptime T1: type, comptime T2: type, comptime T3: type, 
                 const a1_v: Vec1 = arg1[i..][0..vec_size].*;
                 const a2_v: Vec2 = arg2[i..][0..vec_size].*;
                 const a3_v: Vec3 = arg3[i..][0..vec_size].*;
-                out[i..][0..vec_size].* = f(a1_v, a2_v, a3_v);
+                out[i..][0..vec_size].* = f.call(a1_v, a2_v, a3_v);
             }
         }
     };
@@ -566,12 +590,12 @@ test "Vector Function 3" {
             const V3 = VectorFunction3(T, T, T, T, vec_size);
 
             const F = struct {
-                inline fn call(arg1: anytype, arg2: anytype, arg3: anytype) V3.ReturnType(@TypeOf(arg1)) {
+                inline fn call(_: anytype, arg1: anytype, arg2: anytype, arg3: anytype) V3.ReturnType(@TypeOf(arg1)) {
                     return @mulAdd(V3.ReturnType(@TypeOf(arg1)), arg1, arg2, arg3);
                 }
             };
 
-            V3.call(F.call, a1.items, a2.items, a3.items, out.items);
+            V3.call(F{}, a1.items, a2.items, a3.items, out.items);
             for (true_out.items, out.items) |ti, oi| {
                 try testing.expectApproxEqRel(ti, oi, 1e-6);
             }
@@ -594,15 +618,15 @@ pub fn VectorReductionFunction(comptime T: type, comptime vec_size: usize) type 
             }
         }
 
-        inline fn forLoop(comptime f: anytype, arg1: []const T) T {
+        inline fn forLoop(f: anytype, arg1: []const T) T {
             var r = arg1[0];
             for (arg1[1..]) |ai| {
-                r = f(r, ai);
+                r = f.call(r, ai);
             }
             return r;
         }
 
-        pub fn call(comptime f: anytype, arg1: anytype) T {
+        pub fn call(f: anytype, arg1: anytype) T {
             if ((vec_size < 2) or (arg1.len < vec_size)) {
                 return Self.forLoop(f, arg1);
             }
@@ -614,7 +638,7 @@ pub fn VectorReductionFunction(comptime T: type, comptime vec_size: usize) type 
             var i = vec_size;
             while (i < n) : (i += vec_size) {
                 const av: Vec = arg1[i..][0..vec_size].*;
-                v = f(v, av);
+                v = f.call(v, av);
             }
 
             // ToDo: Can we use @reduce() builtin function?
@@ -622,7 +646,7 @@ pub fn VectorReductionFunction(comptime T: type, comptime vec_size: usize) type 
             var r = Self.forLoop(f, &a);
 
             if (rem > 0) {
-                r = f(r, Self.forLoop(f, arg1[i..]));
+                r = f.call(r, Self.forLoop(f, arg1[i..]));
             }
             return r;
         }
@@ -646,17 +670,19 @@ test "Vector Reduction" {
         }
     };
 
-    const Reduction = struct {
-        fn add(a: anytype, b: anytype) @TypeOf(a, b) {
+    const Add = struct {
+        fn call(_: anytype, a: anytype, b: anytype) @TypeOf(a, b) {
             return a + b;
         }
+    };
 
-        fn prod(a: anytype, b: anytype) @TypeOf(a, b) {
+    const Prod = struct {
+        fn call(_: anytype, a: anytype, b: anytype) @TypeOf(a, b) {
             return a * b;
         }
     };
 
-    try Test.do(u32, null, Reduction.add, 2, 200);
-    try Test.do(u32, 0, Reduction.add, 2, 200);
-    try Test.do(u128, null, Reduction.prod, 2, 1 << 100);
+    try Test.do(u32, null, Add{}, 2, 200);
+    try Test.do(u32, 0, Add{}, 2, 200);
+    try Test.do(u128, null, Prod{}, 2, 1 << 100);
 }
