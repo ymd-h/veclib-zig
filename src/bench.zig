@@ -214,6 +214,11 @@ fn Dot(comptime T: type) type {
 
             return @reduce(.Add, rv);
         }
+
+        fn veclib_loop(a: []const T, b: []const T) T {
+            const n = std.simd.suggestVectorLength(T).?;
+            return veclib.matrix.dot(.{ .type = T, .simd_size = n }, a, b);
+        }
     };
 }
 
@@ -272,6 +277,11 @@ fn MatMul(comptime T: type, comptime row: usize, comptime column: usize) type {
                 out[i..][0..n].* = ov;
             }
         }
+
+        fn veclib_loop(m: []const T, v: []const T, out: []T) void {
+            const n = std.simd.suggestVectorLength(T).?;
+            veclib.matrix.mulMV(.{ .type = T, .simd_size = n }, .{ .row = row, .column = column, .data = m }, v, out);
+        }
     };
 }
 
@@ -299,12 +309,14 @@ pub fn main() !void {
     _ = try run_benchDot(f32, allocator, stdout, "dot f32: vec     ", Dot(f32).vec_loop, 8 * N1 * 10);
     _ = try run_benchDot(f32, allocator, stdout, "dot f32: vec-red ", Dot(f32).vec_red_loop, 8 * N1 * 10);
     _ = try run_benchDot(f32, allocator, stdout, "dot f32: vec-fma ", Dot(f32).vec_fma_loop, 8 * N1 * 10);
+    _ = try run_benchDot(f32, allocator, stdout, "dot f32: veclib  ", Dot(f32).veclib_loop, 8 * N1 * 10);
 
     const R = 8 * 1_000;
     const C = 8 * 1_000;
     try run_benchMV(f32, allocator, stdout, "MatMul: for-loop  ", MatMul(f32, R, C).for_loop, R, C);
     try run_benchMV(f32, allocator, stdout, "MatMul: vec in row", MatMul(f32, R, C).vec_in_row_loop, R, C);
     try run_benchMV(f32, allocator, stdout, "MatMul: vec in col", MatMul(f32, R, C).vec_in_column_loop, R, C);
+    try run_benchMV(f32, allocator, stdout, "MatMul: veclib    ", MatMul(f32, R, C).veclib_loop, R, C);
 
     try bw.flush();
 }
