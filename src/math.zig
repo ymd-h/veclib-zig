@@ -14,6 +14,11 @@ const VectorReductionFunction = core.VectorReductionFunction;
 
 const isSIMD = core.isSIMDVector;
 
+const Options = struct {
+    type: type,
+    simd_size: ?usize = null,
+};
+
 pub const NullaryFunction = enum {
     iota,
 };
@@ -635,6 +640,37 @@ test "explicit binary" {
     try Test.do(u8, lte, 8, 3, false);
     try Test.do(u8, min, 4, 3, 3);
     try Test.do(u8, max, 4, 3, 4);
+}
+
+pub fn gather(comptime options: Options, arg: []const options.type, index: []const usize, out: []options.type) void {
+    // TODO: Try to use SIMD
+    for (index, out) |i, *o| {
+        o.* = arg[i];
+    }
+}
+
+test "gather" {
+    const Test = struct {
+        fn do(comptime opt: Options, N: usize) !void {
+            var a = std.ArrayList(opt.type).init(testing.allocator);
+            defer a.deinit();
+            try a.appendNTimes(2.3, N);
+
+            var i = std.ArrayList(usize).init(testing.allocator);
+            defer i.deinit();
+            try i.resize(N);
+
+            iota(i.items);
+
+            var o = std.ArrayList(opt.type).init(testing.allocator);
+            defer o.deinit();
+            try o.resize(N);
+
+            gather(opt, a.items, i.items, o.items);
+        }
+    };
+
+    try Test.do(.{ .type = f32 }, 12);
 }
 
 pub const TernaryFunction = enum {

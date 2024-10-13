@@ -119,6 +119,9 @@ pub const largest = math.largest;
 pub const all = math.all;
 pub const any = math.any;
 
+// util
+pub const gather = math.gather;
+
 test "veclib" {
     _ = @import("./core.zig");
     _ = @import("./math.zig");
