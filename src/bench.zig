@@ -23,22 +23,6 @@ fn bench(writer: anytype, comptime name: []const u8, f: anytype, args: anytype) 
     );
 }
 
-fn run_bench2(comptime T: type, allocator: std.mem.Allocator, writer: anytype, comptime name: []const u8, f: anytype, N: usize) !void {
-    var a = std.ArrayList(T).init(allocator);
-    defer a.deinit();
-    try a.appendNTimes(2, N);
-
-    var b = std.ArrayList(T).init(allocator);
-    defer b.deinit();
-    try b.appendNTimes(7, N);
-
-    var c = std.ArrayList(T).init(allocator);
-    defer c.deinit();
-    try c.resize(N);
-
-    try bench(writer, name, f, .{ a, b, &c });
-}
-
 fn run_benchR(comptime T: type, allocator: std.mem.Allocator, writer: anytype, comptime name: []const u8, f: anytype, N: usize) !T {
     var a = std.ArrayList(T).init(allocator);
     defer a.deinit();
@@ -95,13 +79,44 @@ fn run_benchMV(comptime T: type, allocator: std.mem.Allocator, writer: anytype, 
 
 fn Add(comptime T: type) type {
     return struct {
-        fn for_loop(a: std.ArrayList(T), b: std.ArrayList(T), c: *std.ArrayList(T)) void {
+        const Self = @This();
+        const VL = std.ArrayList(T);
+
+        fn benchmark(allocator: std.mem.Allocator, writer: anytype, w: *veclib.worker.Worker, N: usize) !void {
+            const data = .{
+                .{ Self.for_loop, "naive for-loop   " },
+                .{ Self.vec_loop, "SIMD hand writing" },
+                .{ Self.veclib_loop, "veclib           " },
+                .{ Self.veclib_worker, "veclib-worker    " },
+            };
+
+            inline for (data) |d| {
+                const f = d[0];
+                const name = d[1];
+
+                var a = Self.VL.init(allocator);
+                defer a.deinit();
+                try a.appendNTimes(2, N);
+
+                var b = Self.VL.init(allocator);
+                defer b.deinit();
+                try b.appendNTimes(7, N);
+
+                var c = Self.VL.init(allocator);
+                defer c.deinit();
+                try c.resize(N);
+
+                try bench(writer, name, f, .{ w, a, b, &c });
+            }
+        }
+
+        fn for_loop(_: *veclib.worker.Worker, a: Self.VL, b: Self.VL, c: *Self.VL) void {
             for (a.items, b.items, c.items) |ai, bi, *ci| {
                 ci.* = ai + bi;
             }
         }
 
-        fn vec_loop(a: std.ArrayList(T), b: std.ArrayList(T), c: *std.ArrayList(T)) void {
+        fn vec_loop(_: *veclib.worker.Worker, a: Self.VL, b: Self.VL, c: *Self.VL) void {
             const n = std.simd.suggestVectorLength(T).?;
             const V = @Vector(n, T);
 
@@ -113,8 +128,16 @@ fn Add(comptime T: type) type {
             }
         }
 
-        fn veclib_loop(a: std.ArrayList(T), b: std.ArrayList(T), c: *std.ArrayList(T)) void {
+        fn veclib_loop(_: *veclib.worker.Worker, a: Self.VL, b: Self.VL, c: *Self.VL) void {
             veclib.binary(.{ .type = T, .f = .add }, a.items, b.items, c.items);
+        }
+
+        fn veclib_worker(w: *veclib.worker.Worker, a: Self.VL, b: Self.VL, c: *Self.VL) void {
+            var wg = std.Thread.WaitGroup{};
+            wg.reset();
+
+            w.binary(.{ .type = T, .f = .add }, &wg, a.items, b.items, c.items) catch unreachable;
+            w.pool.?.waitAndWork(&wg);
         }
     };
 }
@@ -294,10 +317,11 @@ pub fn main() !void {
     const stdout = bw.writer();
     _ = try stdout.write("\n");
 
+    var w = try veclib.worker.Worker.init(.{ .allocator = allocator });
+    defer w.deinit();
+
     const N1 = 3_000_000;
-    try run_bench2(u32, allocator, stdout, "Add u32: naive for-loop    ", Add(u32).for_loop, 8 * N1);
-    try run_bench2(u32, allocator, stdout, "Add u32: handwriting vector", Add(u32).vec_loop, 8 * N1);
-    try run_bench2(u32, allocator, stdout, "Add u32: veclib            ", Add(u32).veclib_loop, 8 * N1);
+    try Add(u32).benchmark(allocator, stdout, &w, 8 * N1);
 
     const r1 = try run_benchR(u32, allocator, stdout, "Sum u32: native for-loop   ", Sum(u32).for_loop, 8 * N1);
     const r2 = try run_benchR(u32, allocator, stdout, "Sum u32: handwriting vector", Sum(u32).vec_loop, 8 * N1);
