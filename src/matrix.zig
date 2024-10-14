@@ -6,7 +6,7 @@ const testing = std.testing;
 const core = @import("./core.zig");
 const math = @import("./math.zig");
 
-const Options = struct {
+pub const Options = struct {
     type: type,
     simd_size: ?usize = null,
 };

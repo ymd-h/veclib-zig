@@ -162,9 +162,8 @@ pub const Worker = struct {
         while (it.next()) |range| {
             const row = range.end - range.start;
             const mi = cM{ .row = row, .column = m.column, .data = m.data[range.start..range.end] };
-            const vi = v[range.start..range.end];
             const oi = out[range.start..range.end];
-            try self.spawnWg(wait_group, matrix.mulMV, .{ options, mi, vi, oi });
+            try self.spawnWg(wait_group, matrix.mulMV, .{ options, mi, v, oi });
         }
     }
 
