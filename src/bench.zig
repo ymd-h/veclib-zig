@@ -23,23 +23,6 @@ fn bench(writer: anytype, comptime name: []const u8, f: anytype, args: anytype) 
     );
 }
 
-fn run_benchR(comptime T: type, allocator: std.mem.Allocator, writer: anytype, comptime name: []const u8, f: anytype, N: usize) !T {
-    var a = std.ArrayList(T).init(allocator);
-    defer a.deinit();
-    try a.appendNTimes(2, N);
-
-    const F = struct {
-        inline fn call(arg: std.ArrayList(T), ret: *T) void {
-            ret.* = f(arg);
-        }
-    };
-
-    var r: T = undefined;
-    try bench(writer, name, F.call, .{ a, &r });
-
-    return r;
-}
-
 fn run_benchDot(comptime T: type, allocator: std.mem.Allocator, writer: anytype, comptime name: []const u8, f: anytype, N: usize) !T {
     var a = std.ArrayList(T).init(allocator);
     defer a.deinit();
@@ -128,7 +111,44 @@ fn Add(comptime T: type) type {
 
 fn Sum(comptime T: type) type {
     return struct {
-        fn for_loop(a: std.ArrayList(T)) T {
+        const Self = @This();
+
+        fn benchmark(allocator: std.mem.Allocator, writer: anytype, w: *veclib.worker.Worker, N: usize) !void {
+            const data = .{
+                .{ Self.for_loop, "Sum: naive for-loop   " },
+                .{ Self.vec_loop, "Sum: hand writing SIMD" },
+                .{ Self.veclib_loop, "Sum: veclib           " },
+                .{ Self.veclib_worker, "Sum: veclib worker    " },
+            };
+
+            var o = std.ArrayList(T).init(allocator);
+            defer o.deinit();
+
+            inline for (data) |d| {
+                const f = d[0];
+                const name = d[1];
+
+                var a = std.ArrayList(T).init(allocator);
+                defer a.deinit();
+                try a.appendNTimes(2, N);
+
+                const F = struct {
+                    inline fn call(work: *veclib.worker.Worker, arg: std.ArrayList(T), ret: *T) void {
+                        ret.* = f(work, arg);
+                    }
+                };
+
+                var r: T = undefined;
+                try bench(writer, name, F.call, .{ w, a, &r });
+                try o.append(r);
+            }
+
+            for (o.items[1..]) |oi| {
+                std.debug.assert(o.items[0] == oi);
+            }
+        }
+
+        fn for_loop(_: *veclib.worker.Worker, a: std.ArrayList(T)) T {
             var r = a.items[0];
             for (a.items[1..]) |ai| {
                 r += ai;
@@ -136,7 +156,7 @@ fn Sum(comptime T: type) type {
             return r;
         }
 
-        fn vec_loop(a: std.ArrayList(T)) T {
+        fn vec_loop(_: *veclib.worker.Worker, a: std.ArrayList(T)) T {
             const n = std.simd.suggestVectorLength(T).?;
             const V = @Vector(n, T);
 
@@ -150,8 +170,19 @@ fn Sum(comptime T: type) type {
             return @reduce(.Add, rv);
         }
 
-        fn veclib_loop(a: std.ArrayList(T)) T {
+        fn veclib_loop(_: *veclib.worker.Worker, a: std.ArrayList(T)) T {
             return veclib.reduce(.{ .type = T, .f = .sum }, a.items);
+        }
+
+        fn veclib_worker(w: *veclib.worker.Worker, a: std.ArrayList(T)) T {
+            var wg = std.Thread.WaitGroup{};
+            var o: T = undefined;
+            w.reduce(.{ .type = T, .f = .sum }, &wg, a.items, &o) catch unreachable;
+
+            if (!wg.isDone()) {
+                w.pool.?.waitAndWork(&wg);
+            }
+            return o;
         }
     };
 }
@@ -344,11 +375,7 @@ pub fn main() !void {
     const N1 = 3_000_000;
     try Add(u32).benchmark(allocator, stdout, &w, 8 * N1);
 
-    const r1 = try run_benchR(u32, allocator, stdout, "Sum u32: native for-loop   ", Sum(u32).for_loop, 8 * N1);
-    const r2 = try run_benchR(u32, allocator, stdout, "Sum u32: handwriting vector", Sum(u32).vec_loop, 8 * N1);
-    const r3 = try run_benchR(u32, allocator, stdout, "Sum u32: veclib            ", Sum(u32).veclib_loop, 8 * N1);
-    std.debug.assert(r1 == r2);
-    std.debug.assert(r2 == r3);
+    try Sum(u32).benchmark(allocator, stdout, &w, 8 * N1);
 
     _ = try run_benchDot(f32, allocator, stdout, "dot f32: for-loop", Dot(f32).for_loop, 8 * N1 * 10);
     _ = try run_benchDot(f32, allocator, stdout, "dot f32: vec     ", Dot(f32).vec_loop, 8 * N1 * 10);
