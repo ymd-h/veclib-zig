@@ -122,7 +122,8 @@ pub const Worker = struct {
     pub fn nullary() void {}
 
     pub fn unary(self: *Self, comptime options: math.UnaryOptions, wait_group: *WaitGroup, arg: anytype, out: anytype) !void {
-        var it = RecordItrator.init(options.type, out.len, options.simd_size, self.nThreads());
+        const T = options.type;
+        var it = RecordItrator.init(T, out.len, options.simd_size, self.nThreads());
 
         while (it.next()) |range| {
             const a = arg[range.start..range.end];
@@ -132,7 +133,8 @@ pub const Worker = struct {
     }
 
     pub fn binary(self: *Self, comptime options: math.BinaryOptions, wait_group: *WaitGroup, arg1: anytype, arg2: anytype, out: anytype) !void {
-        var it = RecordItrator.init(options.type, out.len, options.simd_size, self.nThreads());
+        const T = options.type;
+        var it = RecordItrator.init(T, out.len, options.simd_size, self.nThreads());
         while (it.next()) |range| {
             const a1 = arg1[range.start..range.end];
             const a2 = arg2[range.start..range.end];
@@ -142,7 +144,8 @@ pub const Worker = struct {
     }
 
     pub fn ternary(self: *Self, comptime options: math.TernaryOptions, wait_group: *WaitGroup, arg1: anytype, arg2: anytype, arg3: anytype, out: anytype) !void {
-        var it = RecordItrator.init(options.type, out.len, options.simd_size, self.nThreads());
+        const T = options.type;
+        var it = RecordItrator.init(T, out.len, options.simd_size, self.nThreads());
         while (it.next()) |range| {
             const a1 = arg1[range.start..range.end];
             const a2 = arg2[range.start..range.end];
