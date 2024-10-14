@@ -155,7 +155,39 @@ pub const Worker = struct {
         }
     }
 
-    // pub fn reduce(self: *Self, comptime options: math.ReductionOptions, wait_group: *WaitGroup, arg: []const options.type, out: *options.type) void {}
+    fn reduceImpl(self: *Self, comptime options: math.ReductionOptions, args: []const options.type, out: *options.type) !void {
+        const T = options.type;
+        const nthreads = self.nThreads();
+
+        const o = try self.pool.?.allocator.alloc(T, nthreads);
+        defer self.pool.?.allocator.free(o);
+
+        var wg = WaitGroup{};
+
+        const R = struct {
+            fn call(a: []const T, oi: *T) void {
+                oi.* = math.reduce(options, a);
+            }
+        };
+
+        var it = RecordItrator.init(T, out.len, options.simd_size, nthreads);
+        var i: usize = 0;
+        while (it.next()) |range| {
+            const a = args[range.start..range.end];
+            try self.spawnWg(wg, R.call, .{ a, &(o[i]) });
+            i += 1;
+        }
+
+        if (!wg.isDone()) {
+            wg.wait();
+        }
+
+        out.* = math.reduce(options, o[0..i]);
+    }
+
+    pub fn reduce(self: *Self, comptime options: math.ReductionOptions, wait_group: *WaitGroup, args: []const options.type, out: *options.type) !void {
+        try self.spawnWg(wait_group, Self.reduceImpl, .{ self, options, args, out });
+    }
 
     pub fn dot() void {}
 
