@@ -888,7 +888,7 @@ inline fn redFn(comptime f: ReductionFunction, a: anytype, b: @TypeOf(a)) @TypeO
     };
 }
 
-const ReductionOptions = struct {
+pub const ReductionOptions = struct {
     type: type,
     f: ReductionFunction,
     simd_size: ?usize = null,

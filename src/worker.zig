@@ -155,38 +155,40 @@ pub const Worker = struct {
         }
     }
 
-    fn reduceImpl(self: *Self, comptime options: math.ReductionOptions, args: []const options.type, out: *options.type) !void {
+    pub fn reduce(self: *Self, comptime options: math.ReductionOptions, wait_group: *WaitGroup, args: []const options.type, out: *options.type) !void {
         const T = options.type;
         const nthreads = self.nThreads();
 
-        const o = try self.pool.?.allocator.alloc(T, nthreads);
-        defer self.pool.?.allocator.free(o);
+        const allocator = self.pool.?.allocator;
+        const o = try allocator.alloc(T, nthreads);
+        errdefer allocator.free(o);
 
         var wg = WaitGroup{};
-
         const R = struct {
+            const SelfR = @This();
+
             fn call(a: []const T, oi: *T) void {
                 oi.* = math.reduce(options, a);
             }
+
+            fn summarize(w: *WaitGroup, a: []const T, oi: *T, alloc: std.mem.Allocator) void {
+                if (!w.isDone()) {
+                    w.wait();
+                }
+                SelfR.call(a, oi);
+                alloc.free(a);
+            }
         };
 
-        var it = RecordItrator.init(T, out.len, options.simd_size, nthreads);
+        var it = RecordItrator.init(T, args.len, options.simd_size, nthreads);
         var i: usize = 0;
         while (it.next()) |range| {
             const a = args[range.start..range.end];
-            try self.spawnWg(wg, R.call, .{ a, &(o[i]) });
+            try self.spawnWg(&wg, R.call, .{ a, &(o[i]) });
             i += 1;
         }
 
-        if (!wg.isDone()) {
-            wg.wait();
-        }
-
-        out.* = math.reduce(options, o[0..i]);
-    }
-
-    pub fn reduce(self: *Self, comptime options: math.ReductionOptions, wait_group: *WaitGroup, args: []const options.type, out: *options.type) !void {
-        try self.spawnWg(wait_group, Self.reduceImpl, .{ self, options, args, out });
+        try self.spawnWg(wait_group, R.summarize, .{ &wg, o[0..i], out, allocator });
     }
 
     pub fn dot() void {}
@@ -246,4 +248,39 @@ test "worker unary" {
     };
 
     try Test.do(.{ .type = f32, .f = .ceil }, &worker, 100, 3.2, 4.0);
+}
+
+test "worker reduce" {
+    var worker = try Worker.init(.{ .allocator = testing.allocator });
+    defer worker.deinit();
+
+    const Test = struct {
+        fn do(comptime options: math.ReductionOptions, w: *Worker, N: usize, arg: options.type, out: options.type) !void {
+            var a = std.ArrayList(options.type).init(testing.allocator);
+            defer a.deinit();
+            try a.appendNTimes(arg, N);
+
+            var o: options.type = undefined;
+
+            var wg = WaitGroup{};
+            wg.reset();
+            try w.reduce(options, &wg, a.items, &o);
+
+            if (!wg.isDone()) {
+                wg.wait();
+            }
+
+            switch (@typeInfo(options.type)) {
+                compat.int => {
+                    try testing.expectEqual(out, o);
+                },
+                compat.float => {
+                    try testing.expectApproxEqRel(out, o, 1e-6);
+                },
+                else => @compileError(@typeName(options.type) ++ " is not supported."),
+            }
+        }
+    };
+
+    try Test.do(.{ .type = f32, .f = .sum }, &worker, 100, 3.2, 320);
 }
