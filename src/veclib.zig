@@ -35,6 +35,7 @@
 const core = @import("./core.zig");
 const math = @import("./math.zig");
 pub const matrix = @import("./matrix.zig");
+pub const worker = @import("./worker.zig");
 
 pub const VectorFunction0 = core.VectorFunction0;
 pub const VectorFunction1 = core.VectorFunction1;
@@ -126,4 +127,5 @@ test "veclib" {
     _ = @import("./core.zig");
     _ = @import("./math.zig");
     _ = @import("./matrix.zig");
+    _ = @import("./worker.zig");
 }

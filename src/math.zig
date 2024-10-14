@@ -120,7 +120,7 @@ inline fn uniFn(comptime T: type, comptime f: UnaryFunction, a: anytype) T {
     };
 }
 
-const UnaryOptions = struct {
+pub const UnaryOptions = struct {
     type: type,
     f: UnaryFunction,
     simd_size: ?usize = null,
@@ -397,7 +397,7 @@ inline fn biFn(comptime T: type, comptime f: BinaryFunction, a: anytype, b: anyt
 }
 
 /// Options for `binary` function
-const BinaryOptions = struct {
+pub const BinaryOptions = struct {
     /// Input Type
     type: type,
 
