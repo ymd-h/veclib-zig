@@ -643,7 +643,29 @@ test "explicit binary" {
 }
 
 pub fn gather(comptime options: Options, arg: []const options.type, index: []const usize, out: []options.type) void {
-    // TODO: Try to use SIMD
+    // const T = options.type;
+    // const size = core.sizeForSIMD(T, options.simd_size);
+
+    // const V1 = VectorFunction1(usize, T, size);
+    // const Gather = struct {
+    //     a: []const T,
+
+    //     const Self = @This();
+
+    //     pub inline fn call(self: Self, i: anytype) V1.ReturnType(@TypeOf(i)) {
+    //         if (isSIMD(@TypeOf(i))) {
+    //             const p = @intFromPtr(self.a.ptr);
+    //             const P = @Vector(size, @TypeOf(p));
+    //             const V = @Vector(size, *T);
+    //             return @as(V, @ptrFromInt(@as(P, @splat(p)) + @as(P, @intCast(i)))).*; // error: cannot dereference non-pointer type '@Vector(4, *f32)'
+    //         } else {
+    //             return self.a[i];
+    //         }
+    //     }
+    // };
+
+    // V1.call(Gather{ .a = arg }, index, out);
+
     for (index, out) |i, *o| {
         o.* = arg[i];
     }
