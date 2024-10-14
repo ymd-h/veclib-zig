@@ -61,22 +61,6 @@ fn run_benchDot(comptime T: type, allocator: std.mem.Allocator, writer: anytype,
     return r;
 }
 
-fn run_benchMV(comptime T: type, allocator: std.mem.Allocator, writer: anytype, comptime name: []const u8, f: anytype, row: usize, column: usize) !void {
-    var m = std.ArrayList(T).init(allocator);
-    defer m.deinit();
-    try m.appendNTimes(3.2, row * column);
-
-    var v = std.ArrayList(T).init(allocator);
-    defer v.deinit();
-    try v.appendNTimes(2.8, column);
-
-    var o = std.ArrayList(T).init(allocator);
-    defer o.deinit();
-    try o.resize(row);
-
-    try bench(writer, name, f, .{ m.items, v.items, o.items });
-}
-
 fn Add(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -247,7 +231,38 @@ fn Dot(comptime T: type) type {
 
 fn MatMul(comptime T: type, comptime row: usize, comptime column: usize) type {
     return struct {
-        fn for_loop(m: []const T, v: []const T, out: []T) void {
+        const Self = @This();
+
+        fn benchmark(allocator: std.mem.Allocator, writer: anytype, w: *veclib.worker.Worker) !void {
+            const data = .{
+                .{ Self.for_loop, "naive for-loop            " },
+                .{ Self.vec_in_row_loop, "SIMD hand writing (row)   " },
+                .{ Self.vec_in_column_loop, "SIMD hand writing (column)" },
+                .{ Self.veclib_loop, "veclib                    " },
+                .{ Self.veclib_worker, "veclib worker             " },
+            };
+
+            inline for (data) |d| {
+                const f = d[0];
+                const name = d[1];
+
+                var m = std.ArrayList(T).init(allocator);
+                defer m.deinit();
+                try m.appendNTimes(3.2, row * column);
+
+                var v = std.ArrayList(T).init(allocator);
+                defer v.deinit();
+                try v.appendNTimes(2.8, column);
+
+                var o = std.ArrayList(T).init(allocator);
+                defer o.deinit();
+                try o.resize(row);
+
+                try bench(writer, name, f, .{ w, m.items, v.items, o.items });
+            }
+        }
+
+        fn for_loop(_: *veclib.worker.Worker, m: []const T, v: []const T, out: []T) void {
             for (out, 0..) |*o, i| {
                 const rid = i * column;
                 const r = m[rid .. rid + column];
@@ -259,7 +274,7 @@ fn MatMul(comptime T: type, comptime row: usize, comptime column: usize) type {
             }
         }
 
-        fn vec_in_row_loop(m: []const T, v: []const T, out: []T) void {
+        fn vec_in_row_loop(_: *veclib.worker.Worker, m: []const T, v: []const T, out: []T) void {
             const n = std.simd.suggestVectorLength(T).?;
             const V = @Vector(n, T);
 
@@ -276,7 +291,7 @@ fn MatMul(comptime T: type, comptime row: usize, comptime column: usize) type {
             }
         }
 
-        fn vec_in_column_loop(m: []const T, v: []const T, out: []T) void {
+        fn vec_in_column_loop(_: *veclib.worker.Worker, m: []const T, v: []const T, out: []T) void {
             const n = std.simd.suggestVectorLength(T).?;
             const V = @Vector(n, T);
 
@@ -301,9 +316,15 @@ fn MatMul(comptime T: type, comptime row: usize, comptime column: usize) type {
             }
         }
 
-        fn veclib_loop(m: []const T, v: []const T, out: []T) void {
+        fn veclib_loop(_: *veclib.worker.Worker, m: []const T, v: []const T, out: []T) void {
             const n = std.simd.suggestVectorLength(T).?;
             veclib.matrix.mulMV(.{ .type = T, .simd_size = n }, .{ .row = row, .column = column, .data = m }, v, out);
+        }
+
+        fn veclib_worker(w: *veclib.worker.Worker, m: []const T, v: []const T, out: []T) void {
+            var wg = std.Thread.WaitGroup{};
+            w.matMulMV(.{ .type = T }, &wg, .{ .row = row, .column = column, .data = m }, v, out) catch unreachable;
+            w.pool.?.waitAndWork(&wg);
         }
     };
 }
@@ -337,10 +358,7 @@ pub fn main() !void {
 
     const R = 8 * 1_000;
     const C = 8 * 1_000;
-    try run_benchMV(f32, allocator, stdout, "MatMul: for-loop  ", MatMul(f32, R, C).for_loop, R, C);
-    try run_benchMV(f32, allocator, stdout, "MatMul: vec in row", MatMul(f32, R, C).vec_in_row_loop, R, C);
-    try run_benchMV(f32, allocator, stdout, "MatMul: vec in col", MatMul(f32, R, C).vec_in_column_loop, R, C);
-    try run_benchMV(f32, allocator, stdout, "MatMul: veclib    ", MatMul(f32, R, C).veclib_loop, R, C);
+    try MatMul(f32, R, C).benchmark(allocator, stdout, &w);
 
     try bw.flush();
 }
