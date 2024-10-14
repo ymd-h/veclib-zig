@@ -5,6 +5,7 @@ const testing = std.testing;
 
 const core = @import("./core.zig");
 const math = @import("./math.zig");
+const vectest = @import("./vectest.zig");
 
 pub const Options = struct {
     type: type,
@@ -161,7 +162,5 @@ test "mul MM" {
 
     mulMM(.{ .type = f32 }, .{ .row = 2, .column = 2, .data = m1 }, .{ .row = 2, .column = 2, .data = m2 }, .{ .row = 2, .column = 2, .data = &r });
 
-    for (r, o) |ri, oi| {
-        try testing.expectApproxEqRel(ri, oi, 1e-6);
-    }
+    try vectest.expectEqualSlices(f32, o, &r);
 }
