@@ -8,6 +8,7 @@ const core = @import("./core.zig");
 const compat = @import("./compat.zig");
 const math = @import("./math.zig");
 const matrix = @import("./matrix.zig");
+const vectest = @import("./vectest.zig");
 
 fn wgWrapper(comptime f: anytype) type {
     return struct {
@@ -208,20 +209,7 @@ test "worker unary" {
                 wg.wait();
             }
 
-            switch (@typeInfo(options.type)) {
-                compat.int => {
-                    try testing.expectEqualSlices(options.type, t.items, o.items);
-                },
-                compat.float => {
-                    for (t.items, o.items, 0..) |ti, oi, i| {
-                        testing.expectApproxEqRel(ti, oi, 1e-6) catch |e| {
-                            std.debug.print("Fail: {}\n", .{i});
-                            return e;
-                        };
-                    }
-                },
-                else => @compileError(@typeName(options.type) ++ " is not supported"),
-            }
+            try vectest.expectEqualSlices(options.type, t.items, o.items);
         }
     };
 
