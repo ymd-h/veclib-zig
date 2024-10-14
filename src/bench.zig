@@ -68,10 +68,10 @@ fn Add(comptime T: type) type {
 
         fn benchmark(allocator: std.mem.Allocator, writer: anytype, w: *veclib.worker.Worker, N: usize) !void {
             const data = .{
-                .{ Self.for_loop, "naive for-loop   " },
-                .{ Self.vec_loop, "SIMD hand writing" },
-                .{ Self.veclib_loop, "veclib           " },
-                .{ Self.veclib_worker, "veclib-worker    " },
+                .{ Self.for_loop, "Add: naive for-loop   " },
+                .{ Self.vec_loop, "Add: SIMD hand writing" },
+                .{ Self.veclib_loop, "Add: veclib           " },
+                .{ Self.veclib_worker, "Add: veclib-worker    " },
             };
 
             inline for (data) |d| {
@@ -235,11 +235,11 @@ fn MatMul(comptime T: type, comptime row: usize, comptime column: usize) type {
 
         fn benchmark(allocator: std.mem.Allocator, writer: anytype, w: *veclib.worker.Worker) !void {
             const data = .{
-                .{ Self.for_loop, "naive for-loop            " },
-                .{ Self.vec_in_row_loop, "SIMD hand writing (row)   " },
-                .{ Self.vec_in_column_loop, "SIMD hand writing (column)" },
-                .{ Self.veclib_loop, "veclib                    " },
-                .{ Self.veclib_worker, "veclib worker             " },
+                .{ Self.for_loop, "MatMul: naive for-loop            " },
+                .{ Self.vec_in_row_loop, "MatMul: SIMD hand writing (row)   " },
+                .{ Self.vec_in_column_loop, "MatMul: SIMD hand writing (column)" },
+                .{ Self.veclib_loop, "MatMul: veclib                    " },
+                .{ Self.veclib_worker, "MatMul: veclib worker             " },
             };
 
             inline for (data) |d| {
