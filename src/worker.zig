@@ -163,7 +163,10 @@ pub const Worker = struct {
         const o = try allocator.alloc(T, nthreads);
         errdefer allocator.free(o);
 
-        var wg = WaitGroup{};
+        const wg = try allocator.create(WaitGroup);
+        errdefer allocator.destroy(wg);
+        wg.* = WaitGroup{};
+
         const R = struct {
             const SelfR = @This();
 
@@ -177,6 +180,7 @@ pub const Worker = struct {
                 }
                 SelfR.call(a, oi);
                 alloc.free(a);
+                alloc.destroy(w);
             }
         };
 
@@ -184,11 +188,11 @@ pub const Worker = struct {
         var i: usize = 0;
         while (it.next()) |range| {
             const a = args[range.start..range.end];
-            try self.spawnWg(&wg, R.call, .{ a, &(o[i]) });
+            try self.spawnWg(wg, R.call, .{ a, &(o[i]) });
             i += 1;
         }
 
-        try self.spawnWg(wait_group, R.summarize, .{ &wg, o[0..i], out, allocator });
+        try self.spawnWg(wait_group, R.summarize, .{ wg, o[0..i], out, allocator });
     }
 
     pub fn dot() void {}
