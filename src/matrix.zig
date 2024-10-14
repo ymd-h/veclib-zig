@@ -87,6 +87,14 @@ pub fn Matrix(comptime T: type, comptime is_const: bool) type {
         pub fn at(self: Self, r: usize, c: usize) T {
             return self.data[r * self.column + c];
         }
+
+        pub fn subMatrix(self: Self, rstart: usize, rend: usize) Self {
+            return .{
+                .row = rend - rstart,
+                .column = self.column,
+                .data = self.data[rstart * self.column .. rend * self.column],
+            };
+        }
     };
 }
 

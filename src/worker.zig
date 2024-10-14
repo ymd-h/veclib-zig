@@ -157,27 +157,24 @@ pub const Worker = struct {
     pub fn dot() void {}
 
     pub fn matMulMV(self: *Self, comptime options: matrix.Options, wait_group: *WaitGroup, m: matrix.Matrix(options.type, true), v: []const options.type, out: []options.type) !void {
-        const cM = matrix.Matrix(options.type, true);
+        const T = options.type;
 
-        var it = RecordItrator.init(options.type, out.len, options.simd_size, self.nThreads());
+        var it = RecordItrator.init(T, out.len, options.simd_size, self.nThreads());
         while (it.next()) |range| {
-            const row = range.end - range.start;
-            const mi = cM{ .row = row, .column = m.column, .data = m.data[range.start..range.end] };
+            const mi = m.subMatrix(range.start, range.end);
             const oi = out[range.start..range.end];
             try self.spawnWg(wait_group, matrix.mulMV, .{ options, mi, v, oi });
         }
     }
 
     pub fn matMulMM(self: *Self, comptime options: matrix.Options, wait_group: *WaitGroup, m1: matrix.Matrix(options.type, true), m2: matrix.Matrix(options.type, true), out: matrix.Matrix(options.type, false)) !void {
-        const cM = matrix.Matrix(options.type, true);
-        const M = matrix.Matrix(options.type, false);
+        const T = options.type;
 
-        var it = RecordItrator.init(options.type, out.row, options.simd_size, self.nThreads());
+        var it = RecordItrator.init(T, out.row, options.simd_size, self.nThreads());
 
         while (it.next()) |range| {
-            const row = range.end - range.start;
-            const m1_i = cM{ .row = row, .column = m1.column, .data = m1.data[range.start..range.end] };
-            const oi = M{ .row = row, .column = out.column, .data = out.data[range.start..range.end] };
+            const m1_i = m1.subMatrix(range.start, range.end);
+            const oi = out.subMatrix(range.start, range.end);
             try self.spawnWg(wait_group, matrix.mulMM, .{ options, m1_i, m2, oi });
         }
     }
