@@ -193,7 +193,44 @@ pub const Worker = struct {
         try self.spawnWg(wait_group, R.summarize, .{ wg, o[0..i], out, allocator });
     }
 
-    pub fn dot() void {}
+    pub fn dot(self: *Self, comptime options: matrix.Options, wait_group: *WaitGroup, a: []const options.type, b: []const options.type, out: *options.type) void {
+        const T = options.type;
+        const nthreads = self.nThreads();
+
+        const allocator = self.pool.?.allocator;
+        const o = try allocator.alloc(T, nthreads);
+        errdefer allocator.free(o);
+
+        const wg = try allocator.create(WaitGroup);
+        errdefer allocator.destroy(wg);
+        wg.* = WaitGroup{};
+
+        const R = struct {
+            const SelfR = @This();
+
+            fn call(ai: []const T, bi: []const T, oi: *T) void {
+                oi.* = matrix.dot(options, ai, bi);
+            }
+
+            fn summarize(w: *WaitGroup, ov: []const T, oo: *T, alloc: std.mem.Allocator) void {
+                w.wait();
+                oo.* = math.reduce(.{ .type = T, .simd_size = options.simd_size, .f = .sum }, ov);
+                alloc.free(ov);
+                alloc.destroy(w);
+            }
+        };
+
+        var it = RecordItrator.init(T, a.len, options.simd_size, nthreads);
+        var i: usize = 0;
+        while (it.next()) |range| {
+            const ai = a[range.start..range.end];
+            const bi = b[range.start..range.end];
+            try self.spawnWg(wg, R.call, .{ ai, bi, &(o[i]) });
+            i += 1;
+        }
+
+        try self.spawnWg(wait_group, R.summarize, .{ wg, o[0..i], out, allocator });
+    }
 
     pub fn matMulMV(self: *Self, comptime options: matrix.Options, wait_group: *WaitGroup, m: matrix.Matrix(options.type, true), v: []const options.type, out: []options.type) !void {
         const T = options.type;
