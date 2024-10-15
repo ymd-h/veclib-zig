@@ -137,6 +137,8 @@ pub fn mulMM(comptime options: Options, m1: Matrix(options.type, true), m2: Matr
     const T = options.type;
     const size = core.sizeForSIMD(T, options.simd_size);
 
+    math.unary(.{ .type = T, .f = .copy, .simd_size = size }, 0, out.data);
+
     const fmaOp = .{ .type = T, .f = .mulAdd, .simd_size = size };
 
     var r1: usize = 0;
