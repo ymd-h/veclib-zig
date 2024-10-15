@@ -175,9 +175,7 @@ pub const Worker = struct {
             }
 
             fn summarize(w: *WaitGroup, a: []const T, oi: *T, alloc: std.mem.Allocator) void {
-                if (!w.isDone()) {
-                    w.wait();
-                }
+                w.wait();
                 SelfR.call(a, oi);
                 alloc.free(a);
                 alloc.destroy(w);
@@ -243,10 +241,7 @@ test "worker unary" {
             wg.reset();
             try w.unary(options, &wg, a.items, o.items);
 
-            if (!wg.isDone()) {
-                wg.wait();
-            }
-
+            wg.wait();
             try vectest.expectEqualSlices(options.type, t.items, o.items);
         }
     };
@@ -270,10 +265,7 @@ test "worker reduce" {
             wg.reset();
             try w.reduce(options, &wg, a.items, &o);
 
-            if (!wg.isDone()) {
-                wg.wait();
-            }
-
+            wg.wait();
             try vectest.expectEqual(out, o);
         }
     };
