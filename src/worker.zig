@@ -274,15 +274,7 @@ test "worker reduce" {
                 wg.wait();
             }
 
-            switch (@typeInfo(options.type)) {
-                compat.int => {
-                    try testing.expectEqual(out, o);
-                },
-                compat.float => {
-                    try testing.expectApproxEqRel(out, o, 1e-6);
-                },
-                else => @compileError(@typeName(options.type) ++ " is not supported."),
-            }
+            try vectest.expectEqual(out, o);
         }
     };
 

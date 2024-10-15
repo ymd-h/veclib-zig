@@ -19,3 +19,16 @@ pub fn expectEqualSlices(comptime T: type, true_slice: []const T, actual_slice: 
         else => @compileError(@typeName(T) ++ " is not supported."),
     }
 }
+
+pub fn expectEqual(expected: anytype, actual: anytype) !void {
+    const T = @TypeOf(expected, actual);
+    switch (@typeInfo(T)) {
+        compat.int => {
+            try testing.expectEqual(expected, actual);
+        },
+        compat.float => {
+            try testing.expectApproxEqRel(expected, actual, 1e-6);
+        },
+        else => @compileError(@typeName(T) ++ " is not supported."),
+    }
+}
