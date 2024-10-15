@@ -2,7 +2,7 @@
 //!
 //! veclib provides SIMD based functions over slice `[]T`.
 //!
-//! ## Functions
+//! ## (Single Thread) Functions
 //! - Nullary Functions
 //!   - `iota`
 //! - Element-wise Unary Functions
@@ -31,6 +31,11 @@
 //!   - `prod`, `wrapProd`, `saturateProd`,
 //!   - `smallest`, `largest`,
 //!   - `all`, `any`
+//!
+//! ## Multi Thread
+//! `worker.Worker` class leverages multi threads.
+//! Computations are distributed over threads and executed parallely.
+
 
 const core = @import("./core.zig");
 const math = @import("./math.zig");
