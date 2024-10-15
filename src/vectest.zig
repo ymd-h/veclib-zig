@@ -11,7 +11,7 @@ pub fn expectEqualSlices(comptime T: type, true_slice: []const T, actual_slice: 
         compat.float => {
             for (true_slice, actual_slice, 0..) |t, a, i| {
                 testing.expectApproxEqRel(t, a, 1e-6) catch |e| {
-                    std.debug.print("Fail at {}\n", .{i});
+                    std.debug.print("Fail at {}. expected: {}, actual: {}\n", .{i, t, a});
                     return e;
                 };
             }
