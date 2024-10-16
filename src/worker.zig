@@ -110,6 +110,14 @@ pub const Worker = struct {
         return if (self.pool) |p| p.threads.len else 0;
     }
 
+    pub fn wait(self: *Self, w: *WaitGroup) !void {
+        if (self.pool) |p| {
+            p.waitAndWork(w);
+            return;
+        }
+        return error.AlreadyDeinit;
+    }
+
     fn spawnWg(self: *Self, wait_group: *WaitGroup, comptime f: anytype, args: anytype) !void {
         if (self.pool) |p| {
             wait_group.start();
