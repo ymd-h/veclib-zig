@@ -146,7 +146,32 @@ pub const Worker = struct {
         }
     }
 
-    pub fn nullary() void {}
+    pub fn nullary(self: *Self, comptime options: math.NullaryOptions, wait_group: *WaitGroup, out: anytype) void {
+        const T = options.type;
+        var it = RecordItrator.init(T, out.len, options.simd_size, self.nThreads());
+
+        switch (options.f) {
+            .iota => {
+                if (T != usize) {
+                    @compileError(@typeName(T) ++ " is not supported at iota()");
+                }
+
+                const F = struct {
+                    fn call(i: T, oi: []T) void {
+                        math.nullary(options, oi); // iota
+                        math.unary(.{ .type = T, .simd_size = options.simd_size, .f = .add }, i, oi);
+                    }
+                };
+
+                var i: usize = 0;
+                while (it.next()) |range| {
+                    const oi = out[range.start..range.end];
+                    self.spawnWg(wait_group, F.call, .{ i, oi });
+                    i += range.end - range.start;
+                }
+            },
+        }
+    }
 
     pub fn unary(self: *Self, comptime options: math.UnaryOptions, wait_group: *WaitGroup, arg: anytype, out: anytype) !void {
         const T = options.type;
