@@ -308,6 +308,28 @@ pub const Worker = struct {
     }
 };
 
+test "worker nullary" {
+    var worker = try Worker.init(.{ .allocator = testing.allocator });
+    defer worker.deinit();
+
+    const N = 100;
+
+    var true_out = std.ArrayList(usize).init(testing.allocator);
+    defer true_out.deinit();
+    try true_out.resize(N);
+    math.iota(true_out.items);
+
+    var out = std.ArrayList(usize).init(testing.allocator);
+    defer out.deinit();
+    try out.resize(N);
+
+    var wg = WaitGroup{};
+    try worker.nullary(.{ .type = usize, .f = .iota }, &wg, out.items);
+    wg.wait();
+
+    try vectest.expectEqualSlices(usize, true_out.items, out.items);
+}
+
 test "worker unary" {
     var worker = try Worker.init(.{ .allocator = testing.allocator });
     defer worker.deinit();
