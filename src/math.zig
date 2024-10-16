@@ -29,7 +29,7 @@ inline fn nullWithIndexFn(comptime T: type, comptime f: NullaryFunction, i: anyt
     };
 }
 
-const NullaryOptions = struct {
+pub const NullaryOptions = struct {
     type: type,
     f: NullaryFunction,
     simd_size: ?usize = null,
