@@ -10,6 +10,9 @@ const math = @import("./math.zig");
 const matrix = @import("./matrix.zig");
 const vectest = @import("./vectest.zig");
 
+/// Create `WaitGroup` wrapper function
+///
+/// This function ensures to call `WaitGroup.finish()`
 fn wgWrapper(comptime f: anytype) type {
     return struct {
         fn call(wg: *WaitGroup, args: anytype) void {
@@ -24,12 +27,27 @@ const Range = struct {
     end: usize,
 };
 
+/// Iterator for Records
+///
+/// Records are divided to SIMD size segments,
+/// then these segments are equally distributed to threads.
 const RecordItrator = struct {
+    /// Next start position
     start: usize,
+
+    /// Total length
     len: usize,
+
+    /// Number of threads
     nthreads: usize,
+
+    /// SIMD vector size (Number of elements in SIMD / size of segment)
     size: usize,
+
+    /// Number of segments
     batch: usize,
+
+    /// Number of remained segments after equally distributed to threads.
     rem: usize,
 
     const Self = @This();
@@ -48,6 +66,7 @@ const RecordItrator = struct {
         };
     }
 
+    /// Get the next `Range`
     fn next(self: *Self) ?Range {
         if (self.start >= self.len) {
             return null;
