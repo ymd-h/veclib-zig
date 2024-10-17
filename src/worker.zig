@@ -245,7 +245,7 @@ pub const Worker = struct {
         try self.spawnWg(wait_group, R.summarize, .{ wg, o[0..i], out, allocator });
     }
 
-    pub fn dot(self: *Self, comptime options: matrix.Options, wait_group: *WaitGroup, a: []const options.type, b: []const options.type, out: *options.type) void {
+    pub fn dot(self: *Self, comptime options: matrix.Options, wait_group: *WaitGroup, a: []const options.type, b: []const options.type, out: *options.type) !void {
         const T = options.type;
         const nthreads = self.nThreads();
 
@@ -460,3 +460,39 @@ test "worker reduce" {
 
     try Test.do(.{ .type = f32, .f = .sum }, &worker, 100, 3.2, 320);
 }
+
+test "worker vector dot" {
+    var worker = try Worker.init(.{ .allocator = testing.allocator });
+    defer worker.deinit();
+
+    const Test = struct {
+        fn do(comptime options: matrix.Options, w: *Worker, N: usize, arg1: options.type, arg2: options.type) !void {
+            var a = std.ArrayList(options.type).init(testing.allocator);
+            defer a.deinit();
+            try a.appendNTimes(arg1, N);
+
+            var b = std.ArrayList(options.type).init(testing.allocator);
+            defer b.deinit();
+            try b.appendNTimes(arg2, N);
+
+            var o: options.type = undefined;
+
+            const t = matrix.dot(options, a.items, b.items);
+
+            var wg = WaitGroup{};
+            try w.dot(options, &wg, a.items, b.items, &o);
+            wg.wait();
+
+            // This has relatively large error
+            try testing.expectApproxEqRel(t, o, 1e-3);
+        }
+    };
+
+    try Test.do(.{ .type = f32 }, &worker, 100, 2.3, 3.2);
+    try Test.do(.{ .type = f32 }, &worker, 250, 2.3, 3.2);
+    try Test.do(.{ .type = f16 }, &worker, 250, 2.3, 3.2);
+}
+
+test "worker matrix mul MV" {}
+
+test "worker matrix mul MM" {}
