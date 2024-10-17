@@ -374,18 +374,20 @@ pub fn main() !void {
 
     const N1 = 3_000_000;
     try Add(u32).benchmark(allocator, stdout, &w, 8 * N1);
+    try bw.flush();
 
     try Sum(u32).benchmark(allocator, stdout, &w, 8 * N1);
+    try bw.flush();
 
     _ = try run_benchDot(f32, allocator, stdout, "dot f32: for-loop", Dot(f32).for_loop, 8 * N1 * 10);
     _ = try run_benchDot(f32, allocator, stdout, "dot f32: vec     ", Dot(f32).vec_loop, 8 * N1 * 10);
     _ = try run_benchDot(f32, allocator, stdout, "dot f32: vec-red ", Dot(f32).vec_red_loop, 8 * N1 * 10);
     _ = try run_benchDot(f32, allocator, stdout, "dot f32: vec-fma ", Dot(f32).vec_fma_loop, 8 * N1 * 10);
     _ = try run_benchDot(f32, allocator, stdout, "dot f32: veclib  ", Dot(f32).veclib_loop, 8 * N1 * 10);
+    try bw.flush();
 
     const R = 8 * 1_000;
     const C = 8 * 1_000;
     try MatMul(f32, R, C).benchmark(allocator, stdout, &w);
-
     try bw.flush();
 }
