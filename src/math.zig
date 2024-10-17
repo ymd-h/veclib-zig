@@ -707,7 +707,7 @@ inline fn triFn(comptime T: type, comptime f: TernaryFunction, a1: anytype, a2: 
     };
 }
 
-const TernaryOptions = struct {
+pub const TernaryOptions = struct {
     type: type,
     f: TernaryFunction,
     simd_size: ?usize = null,
