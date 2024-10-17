@@ -360,6 +360,43 @@ test "worker unary" {
     try Test.do(.{ .type = f32, .f = .ceil }, &worker, 100, 3.2, 4.0);
 }
 
+test "worker binary" {
+    var worker = try Worker.init(.{ .allocator = testing.allocator });
+    defer worker.deinit();
+
+    const Test = struct {
+        fn do(comptime options: math.BinaryOptions, w: *Worker, N: usize, arg1: options.type, arg2: options.type) !void {
+            var a = std.ArrayList(options.type).init(testing.allocator);
+            defer a.deinit();
+            try a.appendNTimes(arg1, N);
+
+            var b = std.ArrayList(options.type).init(testing.allocator);
+            defer b.deinit();
+            try b.appendNTimes(arg2, N);
+
+            var o = std.ArrayList(options.type).init(testing.allocator);
+            defer o.deinit();
+            try o.resize(N);
+
+            var t = std.ArrayList(options.type).init(testing.allocator);
+            defer t.deinit();
+            try t.resize(N);
+
+            math.binary(options, a.items, b.items, t.items);
+
+            var wg = WaitGroup{};
+            try w.binary(options, &wg, a.items, b.items, o.items);
+            wg.wait();
+
+            try vectest.expectEqualSlices(options.type, t.items, o.items);
+        }
+    };
+
+    try Test.do(.{ .type = f32, .f = .mul }, &worker, 100, 2.3, 3.2);
+    try Test.do(.{ .type = f32, .f = .div }, &worker, 250, 2.3, 3.2);
+    try Test.do(.{ .type = f16, .f = .sub }, &worker, 250, 2.3, 3.2);
+}
+
 test "worker reduce" {
     var worker = try Worker.init(.{ .allocator = testing.allocator });
     defer worker.deinit();
