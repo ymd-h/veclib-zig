@@ -325,7 +325,7 @@ test "worker nullary" {
 
     var wg = WaitGroup{};
     try worker.nullary(.{ .type = usize, .f = .iota }, &wg, out.items);
-    wg.wait();
+    try worker.wait(&wg);
 
     try vectest.expectEqualSlices(usize, true_out.items, out.items);
 }
@@ -352,7 +352,7 @@ test "worker unary" {
             wg.reset();
             try w.unary(options, &wg, a.items, o.items);
 
-            wg.wait();
+            try w.wait(&wg);
             try vectest.expectEqualSlices(options.type, t.items, o.items);
         }
     };
@@ -386,7 +386,7 @@ test "worker binary" {
 
             var wg = WaitGroup{};
             try w.binary(options, &wg, a.items, b.items, o.items);
-            wg.wait();
+            try w.wait(&wg);
 
             try vectest.expectEqualSlices(options.type, t.items, o.items);
         }
@@ -427,7 +427,7 @@ test "worker ternary" {
 
             var wg = WaitGroup{};
             try w.ternary(options, &wg, a.items, b.items, c.items, o.items);
-            wg.wait();
+            try w.wait(&wg);
 
             try vectest.expectEqualSlices(options.type, t.items, o.items);
         }
@@ -453,7 +453,7 @@ test "worker reduce" {
             wg.reset();
             try w.reduce(options, &wg, a.items, &o);
 
-            wg.wait();
+            try w.wait(&wg);
             try vectest.expectEqual(out, o);
         }
     };
@@ -481,7 +481,7 @@ test "worker vector dot" {
 
             var wg = WaitGroup{};
             try w.dot(options, &wg, a.items, b.items, &o);
-            wg.wait();
+            try w.wait(&wg);
 
             // This has relatively large error
             try testing.expectApproxEqRel(t, o, 1e-3);
