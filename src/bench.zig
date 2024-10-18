@@ -394,14 +394,17 @@ pub fn main() !void {
     var w = try Worker.init(.{ .allocator = allocator });
     defer w.deinit();
 
-    const N1 = 3_000_000;
+    const N1 = 30_000_000;
     try Add(u32).benchmark(allocator, stdout, &w, 8 * N1);
+    _ = try stdout.write("\n");
     try bw.flush();
 
     try Sum(u32).benchmark(allocator, stdout, &w, 8 * N1);
+    _ = try stdout.write("\n");
     try bw.flush();
 
-    try Dot(f32).benchmark(allocator, stdout, &w, 8 * N1 * 10);
+    try Dot(f32).benchmark(allocator, stdout, &w, 8 * N1);
+    _ = try stdout.write("\n");
     try bw.flush();
 
     const R = 8 * 1_000;
