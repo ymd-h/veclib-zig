@@ -152,8 +152,7 @@ fn Sum(comptime T: type) type {
         }
 
         fn veclib_loop(_: *Worker, a: std.ArrayList(T)) T {
-            return veclib.sum(T, a.items);
-            // return veclib.reduce(.{ .type = T, .f = .sum }, a.items);
+            return veclib.reduce(.{ .type = T, .f = .sum }, a.items);
         }
 
         fn veclib_worker(w: *Worker, a: std.ArrayList(T)) T {
