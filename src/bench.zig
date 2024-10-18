@@ -1,6 +1,8 @@
 const std = @import("std");
 const veclib = @import("./veclib.zig");
 
+const Worker = veclib.worker.Worker;
+
 fn bench(writer: anytype, comptime name: []const u8, f: anytype, args: anytype) !void {
     const start = std.time.microTimestamp();
     @call(.auto, f, args);
@@ -23,33 +25,12 @@ fn bench(writer: anytype, comptime name: []const u8, f: anytype, args: anytype) 
     );
 }
 
-fn run_benchDot(comptime T: type, allocator: std.mem.Allocator, writer: anytype, comptime name: []const u8, f: anytype, N: usize) !T {
-    var a = std.ArrayList(T).init(allocator);
-    defer a.deinit();
-    try a.appendNTimes(0.5, N);
-
-    var b = std.ArrayList(T).init(allocator);
-    defer b.deinit();
-    try b.appendNTimes(2.0, N);
-
-    const F = struct {
-        inline fn call(a1: anytype, a2: anytype, ret: *T) void {
-            ret.* = f(a1, a2);
-        }
-    };
-
-    var r: T = undefined;
-    try bench(writer, name, F.call, .{ a.items, b.items, &r });
-
-    return r;
-}
-
 fn Add(comptime T: type) type {
     return struct {
         const Self = @This();
         const VL = std.ArrayList(T);
 
-        fn benchmark(allocator: std.mem.Allocator, writer: anytype, w: *veclib.worker.Worker, N: usize) !void {
+        fn benchmark(allocator: std.mem.Allocator, writer: anytype, w: *Worker, N: usize) !void {
             const data = .{
                 .{ Self.for_loop, "Add: naive for-loop   " },
                 .{ Self.vec_loop, "Add: SIMD hand writing" },
@@ -77,13 +58,13 @@ fn Add(comptime T: type) type {
             }
         }
 
-        fn for_loop(_: *veclib.worker.Worker, a: Self.VL, b: Self.VL, c: *Self.VL) void {
+        fn for_loop(_: *Worker, a: Self.VL, b: Self.VL, c: *Self.VL) void {
             for (a.items, b.items, c.items) |ai, bi, *ci| {
                 ci.* = ai + bi;
             }
         }
 
-        fn vec_loop(_: *veclib.worker.Worker, a: Self.VL, b: Self.VL, c: *Self.VL) void {
+        fn vec_loop(_: *Worker, a: Self.VL, b: Self.VL, c: *Self.VL) void {
             const n = std.simd.suggestVectorLength(T).?;
             const V = @Vector(n, T);
 
@@ -95,11 +76,11 @@ fn Add(comptime T: type) type {
             }
         }
 
-        fn veclib_loop(_: *veclib.worker.Worker, a: Self.VL, b: Self.VL, c: *Self.VL) void {
+        fn veclib_loop(_: *Worker, a: Self.VL, b: Self.VL, c: *Self.VL) void {
             veclib.binary(.{ .type = T, .f = .add }, a.items, b.items, c.items);
         }
 
-        fn veclib_worker(w: *veclib.worker.Worker, a: Self.VL, b: Self.VL, c: *Self.VL) void {
+        fn veclib_worker(w: *Worker, a: Self.VL, b: Self.VL, c: *Self.VL) void {
             var wg = std.Thread.WaitGroup{};
             wg.reset();
 
@@ -113,7 +94,7 @@ fn Sum(comptime T: type) type {
     return struct {
         const Self = @This();
 
-        fn benchmark(allocator: std.mem.Allocator, writer: anytype, w: *veclib.worker.Worker, N: usize) !void {
+        fn benchmark(allocator: std.mem.Allocator, writer: anytype, w: *Worker, N: usize) !void {
             const data = .{
                 .{ Self.for_loop, "Sum: naive for-loop   " },
                 .{ Self.vec_loop, "Sum: hand writing SIMD" },
@@ -133,7 +114,7 @@ fn Sum(comptime T: type) type {
                 try a.appendNTimes(2, N);
 
                 const F = struct {
-                    inline fn call(work: *veclib.worker.Worker, arg: std.ArrayList(T), ret: *T) void {
+                    inline fn call(work: *Worker, arg: std.ArrayList(T), ret: *T) void {
                         ret.* = f(work, arg);
                     }
                 };
@@ -148,7 +129,7 @@ fn Sum(comptime T: type) type {
             }
         }
 
-        fn for_loop(_: *veclib.worker.Worker, a: std.ArrayList(T)) T {
+        fn for_loop(_: *Worker, a: std.ArrayList(T)) T {
             var r = a.items[0];
             for (a.items[1..]) |ai| {
                 r += ai;
@@ -156,7 +137,7 @@ fn Sum(comptime T: type) type {
             return r;
         }
 
-        fn vec_loop(_: *veclib.worker.Worker, a: std.ArrayList(T)) T {
+        fn vec_loop(_: *Worker, a: std.ArrayList(T)) T {
             const n = std.simd.suggestVectorLength(T).?;
             const V = @Vector(n, T);
 
@@ -170,11 +151,12 @@ fn Sum(comptime T: type) type {
             return @reduce(.Add, rv);
         }
 
-        fn veclib_loop(_: *veclib.worker.Worker, a: std.ArrayList(T)) T {
-            return veclib.reduce(.{ .type = T, .f = .sum }, a.items);
+        fn veclib_loop(_: *Worker, a: std.ArrayList(T)) T {
+            return veclib.sum(T, a.items);
+            // return veclib.reduce(.{ .type = T, .f = .sum }, a.items);
         }
 
-        fn veclib_worker(w: *veclib.worker.Worker, a: std.ArrayList(T)) T {
+        fn veclib_worker(w: *Worker, a: std.ArrayList(T)) T {
             var wg = std.Thread.WaitGroup{};
             var o: T = undefined;
             w.reduce(.{ .type = T, .f = .sum }, &wg, a.items, &o) catch unreachable;
@@ -189,7 +171,42 @@ fn Sum(comptime T: type) type {
 
 fn Dot(comptime T: type) type {
     return struct {
-        fn for_loop(a: []const T, b: []const T) T {
+        const Self = @This();
+
+        fn benchmark(allocator: std.mem.Allocator, writer: anytype, w: *Worker, N: usize) !void {
+            const data = .{
+                .{ Self.for_loop, "dot: naive for-loop   " },
+                .{ Self.vec_loop, "dot: SIMD hand writing" },
+                .{ Self.vec_red_loop, "dot: SIMD with @reduce" },
+                .{ Self.vec_fma_loop, "dot: SIMD with fuma   " },
+                .{ Self.veclib_loop, "dot: veclib           " },
+                .{ Self.veclib_worker, "dot: veclib-worker    " },
+            };
+
+            inline for (data) |d| {
+                const f = d[0];
+                const name = d[1];
+
+                var a = std.ArrayList(T).init(allocator);
+                defer a.deinit();
+                try a.appendNTimes(0.5, N);
+
+                var b = std.ArrayList(T).init(allocator);
+                defer b.deinit();
+                try b.appendNTimes(2.0, N);
+
+                const F = struct {
+                    inline fn call(worker: *Worker, a1: anytype, a2: anytype, ret: *T) void {
+                        ret.* = f(worker, a1, a2);
+                    }
+                };
+
+                var r: T = undefined;
+                try bench(writer, name, F.call, .{ w, a.items, b.items, &r });
+            }
+        }
+
+        fn for_loop(_: *Worker, a: []const T, b: []const T) T {
             var r: T = 0;
             for (a, b) |ai, bi| {
                 r += ai * bi;
@@ -197,7 +214,7 @@ fn Dot(comptime T: type) type {
             return r;
         }
 
-        fn vec_loop(a: []const T, b: []const T) T {
+        fn vec_loop(_: *Worker, a: []const T, b: []const T) T {
             const n = std.simd.suggestVectorLength(T).?;
             const V = @Vector(n, T);
 
@@ -216,7 +233,7 @@ fn Dot(comptime T: type) type {
             return @reduce(.Add, rv);
         }
 
-        fn vec_red_loop(a: []const T, b: []const T) T {
+        fn vec_red_loop(_: *Worker, a: []const T, b: []const T) T {
             const n = std.simd.suggestVectorLength(T).?;
             const V = @Vector(n, T);
 
@@ -234,7 +251,7 @@ fn Dot(comptime T: type) type {
             return rv;
         }
 
-        fn vec_fma_loop(a: []const T, b: []const T) T {
+        fn vec_fma_loop(_: *Worker, a: []const T, b: []const T) T {
             const n = std.simd.suggestVectorLength(T).?;
             const V = @Vector(n, T);
 
@@ -253,9 +270,16 @@ fn Dot(comptime T: type) type {
             return @reduce(.Add, rv);
         }
 
-        fn veclib_loop(a: []const T, b: []const T) T {
-            const n = std.simd.suggestVectorLength(T).?;
-            return veclib.matrix.dot(.{ .type = T, .simd_size = n }, a, b);
+        fn veclib_loop(_: *Worker, a: []const T, b: []const T) T {
+            return veclib.matrix.dot(.{ .type = T }, a, b);
+        }
+
+        fn veclib_worker(w: *Worker, a: []const T, b: []const T) T {
+            var wg = std.Thread.WaitGroup{};
+            var r: T = undefined;
+            w.dot(.{ .type = T }, &wg, a, b, &r) catch unreachable;
+            w.wait(&wg) catch unreachable;
+            return r;
         }
     };
 }
@@ -264,7 +288,7 @@ fn MatMul(comptime T: type, comptime row: usize, comptime column: usize) type {
     return struct {
         const Self = @This();
 
-        fn benchmark(allocator: std.mem.Allocator, writer: anytype, w: *veclib.worker.Worker) !void {
+        fn benchmark(allocator: std.mem.Allocator, writer: anytype, w: *Worker) !void {
             const data = .{
                 .{ Self.for_loop, "MatMul: naive for-loop            " },
                 .{ Self.vec_in_row_loop, "MatMul: SIMD hand writing (row)   " },
@@ -293,7 +317,7 @@ fn MatMul(comptime T: type, comptime row: usize, comptime column: usize) type {
             }
         }
 
-        fn for_loop(_: *veclib.worker.Worker, m: []const T, v: []const T, out: []T) void {
+        fn for_loop(_: *Worker, m: []const T, v: []const T, out: []T) void {
             for (out, 0..) |*o, i| {
                 const rid = i * column;
                 const r = m[rid .. rid + column];
@@ -305,7 +329,7 @@ fn MatMul(comptime T: type, comptime row: usize, comptime column: usize) type {
             }
         }
 
-        fn vec_in_row_loop(_: *veclib.worker.Worker, m: []const T, v: []const T, out: []T) void {
+        fn vec_in_row_loop(_: *Worker, m: []const T, v: []const T, out: []T) void {
             const n = std.simd.suggestVectorLength(T).?;
             const V = @Vector(n, T);
 
@@ -322,7 +346,7 @@ fn MatMul(comptime T: type, comptime row: usize, comptime column: usize) type {
             }
         }
 
-        fn vec_in_column_loop(_: *veclib.worker.Worker, m: []const T, v: []const T, out: []T) void {
+        fn vec_in_column_loop(_: *Worker, m: []const T, v: []const T, out: []T) void {
             const n = std.simd.suggestVectorLength(T).?;
             const V = @Vector(n, T);
 
@@ -347,15 +371,14 @@ fn MatMul(comptime T: type, comptime row: usize, comptime column: usize) type {
             }
         }
 
-        fn veclib_loop(_: *veclib.worker.Worker, m: []const T, v: []const T, out: []T) void {
-            const n = std.simd.suggestVectorLength(T).?;
-            veclib.matrix.mulMV(.{ .type = T, .simd_size = n }, .{ .row = row, .column = column, .data = m }, v, out);
+        fn veclib_loop(_: *Worker, m: []const T, v: []const T, out: []T) void {
+            veclib.matrix.mulMV(.{ .type = T }, .{ .row = row, .column = column, .data = m }, v, out);
         }
 
-        fn veclib_worker(w: *veclib.worker.Worker, m: []const T, v: []const T, out: []T) void {
+        fn veclib_worker(w: *Worker, m: []const T, v: []const T, out: []T) void {
             var wg = std.Thread.WaitGroup{};
             w.matMulMV(.{ .type = T }, &wg, .{ .row = row, .column = column, .data = m }, v, out) catch unreachable;
-            w.pool.?.waitAndWork(&wg);
+            w.wait(&wg) catch unreachable;
         }
     };
 }
@@ -369,7 +392,7 @@ pub fn main() !void {
     const stdout = bw.writer();
     _ = try stdout.write("\n");
 
-    var w = try veclib.worker.Worker.init(.{ .allocator = allocator });
+    var w = try Worker.init(.{ .allocator = allocator });
     defer w.deinit();
 
     const N1 = 3_000_000;
@@ -379,11 +402,7 @@ pub fn main() !void {
     try Sum(u32).benchmark(allocator, stdout, &w, 8 * N1);
     try bw.flush();
 
-    _ = try run_benchDot(f32, allocator, stdout, "dot f32: for-loop", Dot(f32).for_loop, 8 * N1 * 10);
-    _ = try run_benchDot(f32, allocator, stdout, "dot f32: vec     ", Dot(f32).vec_loop, 8 * N1 * 10);
-    _ = try run_benchDot(f32, allocator, stdout, "dot f32: vec-red ", Dot(f32).vec_red_loop, 8 * N1 * 10);
-    _ = try run_benchDot(f32, allocator, stdout, "dot f32: vec-fma ", Dot(f32).vec_fma_loop, 8 * N1 * 10);
-    _ = try run_benchDot(f32, allocator, stdout, "dot f32: veclib  ", Dot(f32).veclib_loop, 8 * N1 * 10);
+    try Dot(f32).benchmark(allocator, stdout, &w, 8 * N1 * 10);
     try bw.flush();
 
     const R = 8 * 1_000;
