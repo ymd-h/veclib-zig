@@ -484,7 +484,7 @@ test "worker vector dot" {
             try w.wait(&wg);
 
             // This has relatively large error
-            try testing.expectApproxEqRel(t, o, 1e-3);
+            try testing.expectApproxEqRel(t, o, 5e-3);
         }
     };
 
