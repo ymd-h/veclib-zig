@@ -904,7 +904,7 @@ pub fn reduce(comptime options: ReductionOptions, arg: []const options.type) opt
         }
     };
 
-    return VR.call(FR, arg);
+    return @call(.always_inline, VR.call, .{ FR, arg });
 }
 
 test "Reduce" {
