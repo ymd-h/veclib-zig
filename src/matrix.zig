@@ -15,7 +15,7 @@ pub const Options = struct {
 inline fn dotForLoop(comptime T: type, a: []const T, b: []const T) T {
     var r = a[0] * b[0];
     for (a[1..], b[1..]) |ai, bi| {
-        r += ai * bi;
+        r = @mulAdd(T, ai, bi, r);
     }
     return r;
 }
@@ -40,7 +40,7 @@ pub fn dot(comptime options: Options, a: []const options.type, b: []const option
     while (i < n) : (i += size) {
         av = a[i..][0..size].*;
         bv = b[i..][0..size].*;
-        rv += av * bv;
+        rv = @mulAdd(@Vector(size, T), av, bv, rv);
     }
 
     var r = @reduce(.Add, rv);
