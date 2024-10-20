@@ -35,6 +35,7 @@
 //! ## Multi Thread
 //! `worker.Worker` class leverages multi threads.
 //! Computations are distributed over threads and executed parallely.
+//! See `worker` module.
 
 const core = @import("./core.zig");
 const math = @import("./math.zig");
