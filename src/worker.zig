@@ -493,6 +493,101 @@ test "worker vector dot" {
     try Test.do(.{ .type = f16 }, &worker, 250, 2.3, 3.2);
 }
 
-test "worker matrix mul MV" {}
+test "worker matrix mul MV" {
+    var worker = try Worker.init(.{ .allocator = testing.allocator });
+    defer worker.deinit();
 
-test "worker matrix mul MM" {}
+    const Test = struct {
+        fn do(comptime options: matrix.Options, w: *Worker, N: usize, arg1: options.type, arg2: options.type) !void {
+            var a = std.ArrayList(options.type).init(testing.allocator);
+            defer a.deinit();
+            try a.appendNTimes(arg1, N * N);
+            const aMat = matrix.Matrix(options.type, true){
+                .row = N,
+                .column = N,
+                .data = a.items,
+            };
+
+            var b = std.ArrayList(options.type).init(testing.allocator);
+            defer b.deinit();
+            try b.appendNTimes(arg2, N);
+
+            var o = std.ArrayList(options.type).init(testing.allocator);
+            defer o.deinit();
+            try o.resize(N);
+
+            var t = std.ArrayList(options.type).init(testing.allocator);
+            defer t.deinit();
+            try t.resize(N);
+
+            matrix.mulMV(options, aMat, b.items, t.items);
+
+            var wg = WaitGroup{};
+            try w.matMulMV(options, &wg, aMat, b.items, o.items);
+            try w.wait(&wg);
+
+            try vectest.expectEqualSlices(options.type, t.items, o.items);
+        }
+    };
+
+    try Test.do(.{ .type = f32 }, &worker, 100, 2.3, 3.2);
+    try Test.do(.{ .type = f32 }, &worker, 250, 2.3, 3.2);
+    try Test.do(.{ .type = f16 }, &worker, 250, 2.3, 3.2);
+}
+
+test "worker matrix mul MM" {
+    var worker = try Worker.init(.{ .allocator = testing.allocator });
+    defer worker.deinit();
+
+    const Test = struct {
+        fn do(comptime options: matrix.Options, w: *Worker, N: usize, arg1: options.type, arg2: options.type) !void {
+            var a = std.ArrayList(options.type).init(testing.allocator);
+            defer a.deinit();
+            try a.appendNTimes(arg1, N * N);
+            const aMat = matrix.Matrix(options.type, true){
+                .row = N,
+                .column = N,
+                .data = a.items,
+            };
+
+            var b = std.ArrayList(options.type).init(testing.allocator);
+            defer b.deinit();
+            try b.appendNTimes(arg2, N * N);
+            const bMat = matrix.Matrix(options.type, true){
+                .row = N,
+                .column = N,
+                .data = b.items,
+            };
+
+            var o = std.ArrayList(options.type).init(testing.allocator);
+            defer o.deinit();
+            try o.resize(N * N);
+            const oMat = matrix.Matrix(options.type, false){
+                .row = N,
+                .column = N,
+                .data = o.items,
+            };
+
+            var t = std.ArrayList(options.type).init(testing.allocator);
+            defer t.deinit();
+            try t.resize(N * N);
+            const tMat = matrix.Matrix(options.type, false){
+                .row = N,
+                .column = N,
+                .data = t.items,
+            };
+
+            matrix.mulMM(options, aMat, bMat, tMat);
+
+            var wg = WaitGroup{};
+            try w.matMulMM(options, &wg, aMat, bMat, oMat);
+            try w.wait(&wg);
+
+            try vectest.expectEqualSlices(options.type, t.items, o.items);
+        }
+    };
+
+    try Test.do(.{ .type = f32 }, &worker, 100, 2.3, 3.2);
+    try Test.do(.{ .type = f32 }, &worker, 250, 2.3, 3.2);
+    try Test.do(.{ .type = f16 }, &worker, 250, 2.3, 3.2);
+}
