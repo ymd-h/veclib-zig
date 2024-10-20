@@ -72,6 +72,10 @@ test "dot" {
     try Test.do(.{ .type = f32, .simd_size = 0 }, 1.5, 2.0);
 }
 
+/// Matrix Generic Struct
+///
+/// This struct doesn't validate `row`, `column`, and `data.len`,
+/// if user passes invalid arguments, methods may get index out of bounds error.
 pub fn Matrix(comptime T: type, comptime is_const: bool) type {
     return struct {
         row: usize,
@@ -167,6 +171,11 @@ test "mul MM" {
     try vectest.expectEqualSlices(f32, o, &r);
 }
 
+/// Matrix Multiplication with Matrix or Vector
+///
+/// This function is unified interface for `mulMV()` and `mulMM()`.
+/// - `mulMV`: `mv` is `[]const T` and `out` is `[]T`
+/// - `mulMM`: `mv` is `Matrix(T, true)` and `out` is `Matrix(T, false)`
 pub fn mul(comptime options: Options, m: Matrix(options.type, true), mv: anytype, out: anytype) void {
     if (@hasField(@TypeOf(out), "data")) {
         mulMM(options, m, mv, out);
