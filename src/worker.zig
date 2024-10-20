@@ -1,4 +1,21 @@
 //! worker: Multi thread worker module
+//!
+//! `Worker` holds threads pool, and executes SIMD-based computations
+//! over threads asynchronically.
+//!
+//! ```zig
+//! var w = try veclib.worker.Worker(.{ .allocator = allocator });
+//! defer w.deinit();
+//!
+//! wg = std.Thread.WaitGroup{};
+//!
+//! var out = std.ArrayList(usize).init(allocator);
+//! defer out.deinit();
+//! try out.resize(1000);
+//!
+//! try w.nullary(.{ .f = .iota }, &wg, out.items);
+//! try w.wait(&wg);
+//! ```
 
 const std = @import("std");
 const testing = std.testing;
