@@ -166,3 +166,52 @@ test "mul MM" {
 
     try vectest.expectEqualSlices(f32, o, &r);
 }
+
+pub fn mul(comptime options: Options, m: Matrix(options.type, true), mv: anytype, out: anytype) void {
+    if (@hasField(@TypeOf(out), "data")) {
+        mulMM(options, m, mv, out);
+    } else {
+        mulMV(options, m, mv, out);
+    }
+}
+
+test "mul" {
+    const Test = struct {
+        fn do(comptime opt: Options, row: usize, column: usize) !void {
+            var m = std.ArrayList(opt.type).init(testing.allocator);
+            defer m.deinit();
+            try m.appendNTimes(1, row * column);
+
+            var v = std.ArrayList(opt.type).init(testing.allocator);
+            defer v.deinit();
+            try v.appendNTimes(1, column);
+
+            var o = std.ArrayList(opt.type).init(testing.allocator);
+            defer o.deinit();
+            try o.resize(row);
+
+            const mat = .{ .row = row, .column = column, .data = m.items };
+            mul(opt, mat, v.items, o.items);
+            for (o.items) |oi| {
+                try testing.expectEqual(@as(opt.type, @floatFromInt(column)), oi);
+            }
+        }
+    };
+
+    try Test.do(.{ .type = f32 }, 3, 4);
+    try Test.do(.{ .type = f32 }, 325, 431);
+    try Test.do(.{ .type = f32, .simd_size = 0 }, 325, 431);
+
+    const m1: []const f32 = &.{ 3.2, 2.1, 1.2, 1.5 };
+    const m2: []const f32 = &.{ 0.3, 1.2, 1.1, 1.4 };
+    const o: []const f32 = &.{
+        3.2 * 0.3 + 2.1 * 1.1, 3.2 * 1.2 + 2.1 * 1.4,
+        1.2 * 0.3 + 1.5 * 1.1, 1.2 * 1.2 + 1.5 * 1.4,
+    };
+
+    var r: [4]f32 = undefined;
+
+    mul(.{ .type = f32 }, .{ .row = 2, .column = 2, .data = m1 }, .{ .row = 2, .column = 2, .data = m2 }, .{ .row = 2, .column = 2, .data = &r });
+
+    try vectest.expectEqualSlices(f32, o, &r);
+}
