@@ -42,6 +42,15 @@ fn wgWrapper(comptime f: anytype) type {
 const Range = struct {
     start: usize,
     end: usize,
+
+    const Self = @This();
+
+    inline fn slice(self: Self, comptime T: type, arg: anytype) (if (core.ScalarOrVector.which(T, @TypeOf(arg)) == .scalar) T else []T) {
+        return switch (core.ScalarOrVector.which(T, @TypeOf(arg))) {
+            .scalar => arg,
+            .vector => arg[self.start..self.end],
+        };
+    }
 };
 
 /// Iterator for Records
@@ -193,9 +202,8 @@ pub const Worker = struct {
     pub fn unary(self: *Self, comptime options: math.UnaryOptions, wait_group: *WaitGroup, arg: anytype, out: anytype) !void {
         const T = options.type;
         var it = RecordItrator.init(T, out.len, options.simd_size, self.nThreads());
-
         while (it.next()) |range| {
-            const a = arg[range.start..range.end];
+            const a = range.slice(T, arg);
             const o = out[range.start..range.end];
             try self.spawnWg(wait_group, math.unary, .{ options, a, o });
         }
@@ -205,8 +213,8 @@ pub const Worker = struct {
         const T = options.type;
         var it = RecordItrator.init(T, out.len, options.simd_size, self.nThreads());
         while (it.next()) |range| {
-            const a1 = arg1[range.start..range.end];
-            const a2 = arg2[range.start..range.end];
+            const a1 = range.slice(T, arg1);
+            const a2 = range.slice(T, arg2);
             const o = out[range.start..range.end];
             try self.spawnWg(wait_group, math.binary, .{ options, a1, a2, o });
         }
@@ -216,9 +224,9 @@ pub const Worker = struct {
         const T = options.type;
         var it = RecordItrator.init(T, out.len, options.simd_size, self.nThreads());
         while (it.next()) |range| {
-            const a1 = arg1[range.start..range.end];
-            const a2 = arg2[range.start..range.end];
-            const a3 = arg3[range.start..range.end];
+            const a1 = range.slice(T, arg1);
+            const a2 = range.slice(T, arg2);
+            const a3 = range.slice(T, arg3);
             const o = out[range.start..range.end];
             try self.spawnWg(wait_group, math.ternary, .{ options, a1, a2, a3, o });
         }

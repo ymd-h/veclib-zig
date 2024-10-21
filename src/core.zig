@@ -11,13 +11,13 @@ pub inline fn sizeForSIMD(comptime T: type, comptime size: ?usize) usize {
     }
 }
 
-const ScalarOrVector = enum {
+pub const ScalarOrVector = enum {
     scalar,
     vector,
 
     const Self = @This();
 
-    inline fn which(comptime T: type, comptime V: type) Self {
+    pub inline fn which(comptime T: type, comptime V: type) Self {
         comptime {
             const S = []T;
             const cS = []const T;
