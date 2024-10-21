@@ -376,8 +376,16 @@ test "worker unary" {
             var wg = WaitGroup{};
             wg.reset();
             try w.unary(options, &wg, a.items, o.items);
-
             try w.wait(&wg);
+            try vectest.expectEqualSlices(options.type, t.items, o.items);
+
+            o.clearRetainingCapacity();
+            try o.resize(N);
+
+            var wg2 = WaitGroup{};
+            wg2.reset();
+            try w.unary(options, &wg2, arg, o.items);
+            try w.wait(&wg2);
             try vectest.expectEqualSlices(options.type, t.items, o.items);
         }
     };
@@ -412,7 +420,22 @@ test "worker binary" {
             var wg = WaitGroup{};
             try w.binary(options, &wg, a.items, b.items, o.items);
             try w.wait(&wg);
+            try vectest.expectEqualSlices(options.type, t.items, o.items);
 
+            o.clearRetainingCapacity();
+            try o.resize(N);
+
+            var wg2 = WaitGroup{};
+            try w.binary(options, &wg2, a.items, arg2, o.items);
+            try w.wait(&wg2);
+            try vectest.expectEqualSlices(options.type, t.items, o.items);
+
+            o.clearRetainingCapacity();
+            try o.resize(N);
+
+            var wg3 = WaitGroup{};
+            try w.binary(options, &wg3, arg1, b.items, o.items);
+            try w.wait(&wg3);
             try vectest.expectEqualSlices(options.type, t.items, o.items);
         }
     };
@@ -453,7 +476,30 @@ test "worker ternary" {
             var wg = WaitGroup{};
             try w.ternary(options, &wg, a.items, b.items, c.items, o.items);
             try w.wait(&wg);
+            try vectest.expectEqualSlices(options.type, t.items, o.items);
 
+            o.clearRetainingCapacity();
+            try o.resize(N);
+
+            wg = WaitGroup{};
+            try w.ternary(options, &wg, arg1, b.items, c.items, o.items);
+            try w.wait(&wg);
+            try vectest.expectEqualSlices(options.type, t.items, o.items);
+
+            o.clearRetainingCapacity();
+            try o.resize(N);
+
+            wg = WaitGroup{};
+            try w.ternary(options, &wg, a.items, arg2, c.items, o.items);
+            try w.wait(&wg);
+            try vectest.expectEqualSlices(options.type, t.items, o.items);
+
+            o.clearRetainingCapacity();
+            try o.resize(N);
+
+            wg = WaitGroup{};
+            try w.ternary(options, &wg, a.items, b.items, arg3, o.items);
+            try w.wait(&wg);
             try vectest.expectEqualSlices(options.type, t.items, o.items);
         }
     };
