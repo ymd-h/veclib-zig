@@ -39,19 +39,45 @@ fn wgWrapper(comptime f: anytype) type {
     };
 }
 
+inline fn RangeReturnType(comptime T: type, comptime A: type) type {
+    comptime {
+        return switch (core.ScalarOrVector.which(T, A)) {
+            .scalar => T,
+            .vector => switch (@typeInfo(A)) {
+                compat.pointer => |p| if (p.is_const) []const T else []T,
+                compat.array => []const T,
+                else => []T,
+            },
+        };
+    }
+}
+
 const Range = struct {
     start: usize,
     end: usize,
 
     const Self = @This();
 
-    inline fn slice(self: Self, comptime T: type, arg: anytype) (if (core.ScalarOrVector.which(T, @TypeOf(arg)) == .scalar) T else []T) {
-        return switch (core.ScalarOrVector.which(T, @TypeOf(arg))) {
+    inline fn slice(self: Self, comptime T: type, arg: anytype) RangeReturnType(T, @TypeOf(arg)) {
+        const A = @TypeOf(arg);
+        return switch (core.ScalarOrVector.which(T, A)) {
             .scalar => arg,
             .vector => arg[self.start..self.end],
         };
     }
 };
+
+test "Range" {
+    const end: usize = 2;
+    const r = Range{ .start = 0, .end = end };
+
+    const a: []const u8 = &.{ 0, 1, 2 };
+    _ = r.slice(u8, a);
+
+    const b = [_]u8{ 1, 2, 3, 4 };
+    _ = r.slice(u8, b);
+    _ = r.slice(u8, &b);
+}
 
 /// Iterator for Records
 ///
