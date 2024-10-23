@@ -53,6 +53,19 @@ pub const unary = math.unary;
 pub const binary = math.binary;
 pub const ternary = math.ternary;
 
+pub const Options = matrix.Options;
+pub const NullaryOptions = math.NullaryOptions;
+pub const UnaryOptions = math.UnaryOptions;
+pub const BinaryOptions = math.BinaryOptions;
+pub const TernaryOptions = math.TernaryOptions;
+pub const ReductionOptions = math.ReductionOptions;
+
+pub const NullaryFunction = math.NullaryFunction;
+pub const UnaryFunction = math.UnaryFunction;
+pub const BinaryFunction = math.BinaryFunction;
+pub const TernaryFunction = math.TernaryFunction;
+pub const ReductionFunction = math.ReductionFunction;
+
 // Nullary Function
 pub const iota = math.iota;
 
