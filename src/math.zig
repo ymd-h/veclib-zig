@@ -349,8 +349,8 @@ pub const BinaryFunction = enum {
     wrap_mul,
     sat_mul,
     div,
-    divFloor,
-    divTrunc,
+    div_floor,
+    div_trunc,
     rem,
     mod,
     bit_and,
@@ -378,8 +378,8 @@ inline fn biFn(comptime T: type, comptime f: BinaryFunction, a: anytype, b: anyt
         .wrap_mul => a *% b,
         .sat_mul => a *| b,
         .div => a / b,
-        .divFloor => @divFloor(a, b),
-        .divTrunc => @divTrunc(a, b),
+        .div_floor => @divFloor(a, b),
+        .div_trunc => @divTrunc(a, b),
         .rem => a % b,
         .mod => @mod(a, b),
         .bit_and => a & b,
@@ -527,11 +527,11 @@ pub fn div(comptime T: type, arg1: anytype, arg2: anytype, out: []T) void {
 }
 
 pub fn divFloor(comptime T: type, arg1: anytype, arg2: anytype, out: []T) void {
-    binary(.{ .type = T, .f = .divFloor }, arg1, arg2, out);
+    binary(.{ .type = T, .f = .div_floor }, arg1, arg2, out);
 }
 
 pub fn divTrunc(comptime T: type, arg1: anytype, arg2: anytype, out: []T) void {
-    binary(.{ .type = T, .f = .divTrunc }, arg1, arg2, out);
+    binary(.{ .type = T, .f = .div_trunc }, arg1, arg2, out);
 }
 
 pub fn rem(comptime T: type, arg1: anytype, arg2: anytype, out: []T) void {
